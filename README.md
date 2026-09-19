@@ -220,8 +220,44 @@ a natural category in their prefix — `admin` (16 docs), `advising` (1),
 store that prefix as a `category` metadata field on
 every chunk at index time, and let `app.py retrieve` / `app.py ask` take a
 `--category NAME` flag that narrows Chroma's search with a `where` clause
-before distances are computed. The write-up of what changed goes in this
-section once it's built — see below.
+before distances are computed.
+
+**Built:** `store.py::build_index` now tags every chunk's metadata with
+`category` (the source filename's prefix before its first underscore).
+`store.py::search` takes an optional `category` argument and, when given,
+passes `where={"category": category}` to `collection.query` — the excluded
+chunks are invisible to that query, not merely ranked lower. `--category`
+is wired into both `app.py retrieve` and `app.py ask`.
+
+**What changed, same query, with and without the filter:** "What are the
+hours?" is genuinely ambiguous in this corpus — dining halls, the shuttle,
+and the health center all describe their own "hours" in similar phrasing.
+
+Unfiltered, `python app.py ask "What are the hours?"` retrieves chunks from
+four different categories (dining, transit, health, and an unrelated STAT
+150 workload chunk that happened to share vocabulary) and the model
+answers with a bulleted list spanning all of them:
+
+```
+Because the question asks broadly "What are the hours?" for multiple locations, the hours from the provided documents are:
+
+* The Atrium: 8:00am to 6:00pm weekdays (dining_the_atrium.txt).
+* Kestrel Commons: 7:00am to 9:00pm weekdays, 9:00am to 8:00pm weekends (dining_kestrel_commons.txt).
+* The campus shuttle: Runs from 7am to 11pm on weekdays (transit_shuttle.txt).
+* The health centre: Walk-in hours are 8am to 11am (health_center.txt).
+```
+
+With `python app.py ask "What are the hours?" --category health`, only the
+two `health_center.txt` chunks are visible to retrieval, and the answer
+narrows to exactly the thing meant:
+
+```
+Based on health_center.txt, walk-in hours at the health centre are from 8am to 11am. Everything after that is by appointment.
+```
+
+Same question, same index, same threshold — the filter is the only thing
+that changed, and it's the difference between a sprawling four-topic
+answer and a one-topic one.
 
 ---
 

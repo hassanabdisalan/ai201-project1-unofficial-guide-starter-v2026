@@ -42,6 +42,15 @@ class Result:
     label: str
     distance: float   # LOWER IS BETTER. 0.3 is close, 0.9 is unrelated.
     produced_by: str
+    category: str
+
+
+def _category(source: str) -> str:
+    """The filename prefix before the first underscore, e.g. 'housing' from
+    'housing_aldridge_hall.txt'. Metadata filtering (stretch) narrows search
+    to one of these via `search(..., category=...)`."""
+    stem = source.rsplit(".", 1)[0]
+    return stem.split("_", 1)[0]
 
 
 _model = None
@@ -170,7 +179,12 @@ def build_index(
             documents=[c.text for c in window],
             embeddings=embed([c.text for c in window]),
             metadatas=[
-                {"source": c.source, "index": c.index, "produced_by": c.produced_by}
+                {
+                    "source": c.source,
+                    "index": c.index,
+                    "produced_by": c.produced_by,
+                    "category": _category(c.source),
+                }
                 for c in window
             ],
         )
@@ -183,11 +197,17 @@ def search(
     top_k: int | None = None,
     corpus: str | None = None,
     variant: str = "default",
+    category: str | None = None,
 ) -> list[Result]:
     """
     Retrieve the chunks closest in meaning to a question.
 
     Returns them nearest-first, each with its distance.
+
+    `category` (stretch: metadata filtering) narrows the search to chunks
+    from one filename prefix — e.g. "housing" — before distances are even
+    computed, using Chroma's `where` clause. Chunks outside that category
+    are invisible to this query, not merely ranked lower.
     """
     top_k = top_k or config.TOP_K
     name = config.collection_name(corpus, variant)
@@ -199,9 +219,12 @@ def search(
             f"No index called '{name}'. Run `python app.py index` first."
         ) from exc
 
+    where = {"category": category} if category else None
+
     raw = collection.query(
         query_embeddings=embed([question]),
         n_results=min(top_k, collection.count()),
+        where=where,
     )
 
     results: list[Result] = []
@@ -215,6 +238,7 @@ def search(
                 label=f"{meta.get('source', 'unknown')}#{meta.get('index', 0)}",
                 distance=float(distance),
                 produced_by=str(meta.get("produced_by", "unknown")),
+                category=str(meta.get("category", "unknown")),
             )
         )
     return results
