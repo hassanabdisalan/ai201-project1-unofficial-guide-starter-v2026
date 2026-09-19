@@ -259,6 +259,29 @@ Same question, same index, same threshold — the filter is the only thing
 that changed, and it's the difference between a sprawling four-topic
 answer and a one-topic one.
 
+## Stretch Feature: Conversational Memory
+
+**Declared before building.** The interactive loop (`python app.py ask`
+with no question argument) already runs multiple turns in one process, so
+it's the natural place for this: I'm going to keep the last few
+question/answer pairs in that loop, use the previous question plus the new
+one together as the retrieval query (so a vague follow-up like "what about
+Sundays?" still retrieves the right chunk instead of nothing), and pass the
+actual prior Q&A into the model's prompt as conversation history so it can
+resolve pronouns and references the new question doesn't spell out.
+Write-up of the two-turn exchange goes below once it's built.
+
+## Stretch Feature: A Second Embedding Model
+
+**Declared before building.** I'm going to install
+`sentence-transformers>=3.4,<3.5`, add a second `--variant` index of
+`campus_life` embedded with a different model instead of the bundled
+`all-MiniLM-L6-v2`, and run the same test questions against both to see
+what actually moves — which results change rank, and whether my measured
+0.6 threshold (calibrated against MiniLM's distances in Milestone 4) still
+sits in a clean gap once distances come from a different model. Results go
+below once it's built.
+
 ---
 
 # Week 2
