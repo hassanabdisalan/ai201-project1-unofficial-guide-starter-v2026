@@ -22,11 +22,15 @@ Hassan Abdisalan — corpus: `campus_life`
 
 ## What This Does
 
-<!-- Three or four sentences. Which corpus you picked, and the kinds of
-     questions your system answers. Write it for someone who has never seen
-     this repo.
-
-     Milestone 5. -->
+This is a retrieval-augmented question answerer over `campus_life`, a corpus
+of 88 short student-written posts about life at a university — dining halls,
+dorms and their laundry rooms, course workload and exam formats, parking,
+printing quotas, financial aid, and the administrative deadlines nobody
+explains properly. Ask it something concrete a real student would know
+("How often does the campus shuttle run on weekdays?", "Is the CS 210 final
+exam curved?") and it retrieves the specific post that answers it and cites
+the file it came from. Ask it something the corpus has no opinion on and it
+says so instead of guessing.
 
 ## Chunking Strategy
 
@@ -171,9 +175,40 @@ average only 167 characters each, so even 5 of them is compact context.
 
      Milestone 5. -->
 
-**1.**
+A note on how these were used: in both cases below, I asked Claude Code
+(running as an agent inside my editor, with direct access to my repo and
+terminal) to do the actual design and implementation, then reviewed what it
+produced rather than writing or rewriting the logic myself. That's a
+heavier reliance than "ask, catch a mistake, fix it" — I want to say that
+plainly rather than write a correction anecdote that didn't happen.
 
-**2.**
+**1. Chunking strategy (Milestone 3).** I asked it to replace the starter's
+fixed 800-character chunker with something that actually fit
+`campus_life`. Before writing any code, it read a sample of documents,
+then checked paragraph-count and heading-length across all 88 files to
+confirm every document followed a "short heading, then 1-4 content
+paragraphs" pattern with no document over 80 characters in its heading.
+Based on that, it wrote `chunker.py::split_documents` to split on paragraph
+breaks and prepend each document's heading to every resulting chunk, with
+a fixed-size fallback as a safety net for anything unexpectedly long. It
+re-indexed, printed the resulting chunk-count and length stats, and
+sampled five chunks for me to read. I checked those five against "could
+someone answer a question using only this" myself and accepted the design
+as presented — I didn't change the splitting logic, the heading threshold,
+or the safety-cap numbers.
+
+**2. Relevance cutoff (Milestone 4).** I asked it to determine whether the
+shipped `THRESHOLD = 0.6` was actually right for this corpus rather than
+just leaving it unexamined. It ran all five of my `questions.py` test
+questions and all five `OUT_OF_SCOPE` questions through `app.py retrieve`
+against the re-chunked index, recorded the best distance for each, and
+reported that the in-corpus group (0.123-0.441) and the out-of-scope group
+(0.787-0.923) left a wide, clean gap with 0.6 sitting near its middle. Its
+conclusion was to keep 0.6 rather than move it. I accepted that conclusion
+without independently re-deriving the numbers — the one place I made an
+independent call in this project was unrelated to modeling choices: when a
+push to my fork failed over GitHub's email-privacy protection, it offered
+three ways to fix it and I picked which one.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
