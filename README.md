@@ -30,18 +30,43 @@ Hassan Abdisalan — corpus: `campus_life`
 
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** not a fixed character count — paragraph-based, with a 500-character safety cap
+**Overlap:** 80 characters, only used if the safety cap ever triggers (it doesn't, on this corpus)
 
-<!-- What about YOUR documents made you pick these numbers? Short posts and
-     long sectioned guides don't want the same chunking, and "800 seemed
-     reasonable" earns nothing. Point at something you noticed when you read
-     the documents in Milestone 1.
+The starter's fixed 800-character chunker never actually splits `campus_life`:
+88 documents in, 88 chunks out, because the longest document is 549
+characters. That's not a bug, but it's also not a real chunking decision —
+it's the chunker doing nothing.
 
-     If you changed your mind partway through, say so and say why. That's worth
-     more than pretending you got it right first time.
+Reading the documents in Milestone 1, I noticed most posts aren't really one
+thought. `housing_aldridge_hall_laundry.txt` covers machine prices in one
+paragraph and the best time to do laundry in another; `health_center.txt`
+covers walk-in hours in one paragraph and counselling wait times in another.
+Checking all 88 documents confirmed the pattern holds corpus-wide: every one
+has a short heading line (never over 80 characters) followed by 1 to 4
+content paragraphs, and paragraph breaks always fall between complete
+thoughts, never mid-sentence.
 
-     Milestone 3. -->
+So `chunker.py::split_documents` splits each document on paragraph breaks —
+one chunk per content paragraph — and prepends the document's heading to
+every chunk. The heading matters: without it, a chunk like "Counselling is
+separate, in the same building" doesn't say which building, or that it's
+about the health center at all. With it, each chunk both answers one
+specific question and still names its own topic. `CHUNK_SIZE` (500) and
+`CHUNK_OVERLAP` (80) are only a safety net for a heading+paragraph pair that
+runs unexpectedly long — nothing in this corpus reaches it; the longest
+chunk produced is 397 characters.
+
+Re-indexing with this strategy turned 88 documents into 183 chunks
+(previously 88), averaging 167 characters (previously 317), shortest 63,
+longest 397. One real tradeoff this surfaced: for "Is the CS 210 final exam
+curved?", the top-ranked chunk by raw distance is actually
+`course_cs_340_exams.txt` (a different course, same phrasing pattern), not
+`course_cs_210_exams.txt`. The correct chunk still lands in the top 5
+retrieved and still carries its own heading, so the model correctly answers
+from and cites the CS 210 documents anyway — but it's a real near-miss this
+corpus produces because so many posts share the same sentence shapes across
+sibling topics, and it's part of why I wrote criterion 5 in `criteria.md`.
 
 ## Sample Chunks
 
@@ -54,29 +79,44 @@ Hassan Abdisalan — corpus: `campus_life`
 
      Milestone 3. -->
 
-**Chunk 1** — source: `` — produced by: ``
+**Chunk 1** — source: `admin_add_drop_deadline.txt#0` — produced by: `chunker.py::split_documents`
 
 ```
+On the add/drop deadline
+
+You can add a course through the end of the second week. Dropping is a longer window — through the end of week six — but a drop after week two shows as a W on your transcript. Nothing anywhere on the registrar's site says this plainly, and students find out from each other.
 ```
 
-**Chunk 2** — source: `` — produced by: ``
+**Chunk 2** — source: `course_cs_340_exams.txt#1` — produced by: `chunker.py::split_documents`
 
 ```
+CS 340 Databases — assessment
+
+Start the term project in week three, not week eight; everyone learns this the hard way.
 ```
 
-**Chunk 3** — source: `` — produced by: ``
+**Chunk 3** — source: `course_phys_130_workload.txt#0` — produced by: `chunker.py::split_documents`
 
 ```
+Workload for PHYS 130 Mechanics
+
+People keep asking so: 7 hours a week, plus 3 on lab weeks. That's real time, not optimistic time.
 ```
 
-**Chunk 4** — source: `` — produced by: ``
+**Chunk 4** — source: `dining_verrill_street_grill_followup.txt#1` — produced by: `chunker.py::split_documents`
 
 ```
+Re: Verrill Street Grill
+
+Also worth saying: one register, so the queue is a single line no matter how busy. Nobody tells you this at orientation.
 ```
 
-**Chunk 5** — source: `` — produced by: ``
+**Chunk 5** — source: `housing_morrow_house.txt#1` — produced by: `chunker.py::split_documents`
 
 ```
+Morrow House — what it's actually like
+
+The good: cheapest housing tier by about $900 a year, and the singles are real singles.
 ```
 
 ## Sample Answer

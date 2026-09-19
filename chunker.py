@@ -80,24 +80,85 @@ def fallback_split(
     return chunks
 
 
+# Below this length, a first paragraph reads as a heading ("Laundry in
+# Aldridge Hall") rather than as content in its own right. Every campus_life
+# document happens to have one — checked across all 88 before picking this.
+HEADING_MAX_CHARS = 80
+
+# A chunk shorter than this couldn't stand on its own even with the heading
+# attached, so it gets folded into its neighbour instead of shipped as a
+# fragment. Nothing in campus_life actually triggers this (shortest observed
+# chunk is 63 characters) — it's a safety net for a document that doesn't fit
+# the pattern the rest of the corpus does.
+MIN_CHUNK_CHARS = 40
+
+
 def split_documents(documents: list[Document]) -> list[Chunk]:
     """
-    Split documents into chunks. ⚠️ REPLACE THE BODY OF THIS IN MILESTONE 3.
+    Split each document on paragraph breaks, one chunk per paragraph, with the
+    document's own heading carried into every chunk so each one still says
+    what it's about.
 
-    Right now it just calls the fallback. That is the plain, generic behaviour
-    the brief is talking about.
+    campus_life posts are short (88 documents, 317 characters average, none
+    over 800) but most bundle two to four separable facts under one heading —
+    "Laundry in Aldridge Hall" covers both machine prices and the best time to
+    go, as two different paragraphs. Splitting on paragraph breaks pulls those
+    apart into chunks that each answer one question instead of two, without
+    cutting any sentence in half — paragraph breaks in this corpus always fall
+    between complete thoughts, never inside one.
 
-    When you write your own strategy, set `produced_by` to
-    "chunker.py::split_documents" so your README's Sample Chunks section names
-    the right function. `app.py chunks` prints that string for you.
-
-    Things worth thinking about before you write any code:
-      - Are your documents short posts or long guides?
-      - Is the useful information in one sentence, or spread over a paragraph?
-      - Would splitting on paragraph breaks keep more thoughts intact than
-        splitting on a character count?
+    A heading-only paragraph is folded into the next one rather than shipped
+    as its own chunk, since "Laundry in Aldridge Hall" alone answers nothing.
     """
-    return fallback_split(documents)
+    chunks: list[Chunk] = []
+    for doc in documents:
+        chunks.extend(_split_one(doc))
+    return chunks
+
+
+def _split_one(doc: Document) -> list[Chunk]:
+    paragraphs = [p.strip() for p in doc.text.split("\n\n") if p.strip()]
+    if not paragraphs:
+        return []
+
+    heading, body = paragraphs[0], paragraphs[1:]
+    has_heading = len(heading) <= HEADING_MAX_CHARS and body
+    if not has_heading:
+        # No separable heading (or nothing after it) — treat every paragraph
+        # as its own piece of content instead of losing the first one.
+        heading, body = None, paragraphs
+
+    pieces = [f"{heading}\n\n{para}" if heading else para for para in body]
+    pieces = [piece for text in pieces for piece in _cap_length(text)]
+
+    merged: list[str] = []
+    for piece in pieces:
+        if merged and len(piece) < MIN_CHUNK_CHARS:
+            merged[-1] = f"{merged[-1]} {piece}"
+        else:
+            merged.append(piece)
+
+    return [
+        Chunk(text=text, source=doc.source, index=i, produced_by="chunker.py::split_documents")
+        for i, text in enumerate(merged)
+    ]
+
+
+def _cap_length(text: str) -> list[str]:
+    """
+    Safety net, not the main strategy: if a heading+paragraph pair still runs
+    past CHUNK_SIZE, fall back to fixed-size windows rather than ship one
+    oversized chunk. Nothing in campus_life is long enough to reach this —
+    the longest chunk produced is 397 characters against an 800 default.
+    """
+    if len(text) <= config.CHUNK_SIZE:
+        return [text]
+    step = config.CHUNK_SIZE - config.CHUNK_OVERLAP
+    return [
+        text[i : i + config.CHUNK_SIZE].strip()
+        for i in range(0, len(text), step)
+        if text[i : i + config.CHUNK_SIZE].strip()
+    ]
 
 
 def describe(chunks: list[Chunk]) -> str:

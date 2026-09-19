@@ -24,11 +24,13 @@ CORPUS = os.getenv("AI201_CORPUS", "campus_life")
 
 
 # ─── Chunking (Milestone 3) ──────────────────────────────────────────────────
-# These are deliberately plain, generic numbers. Milestone 3 is where you
-# replace them with numbers that fit the documents you actually read.
+# campus_life's real chunking strategy is paragraph splitting — see
+# chunker.py::split_documents. These two numbers are only a safety cap for a
+# heading+paragraph pair that runs unexpectedly long; the longest one this
+# corpus actually produces is 397 characters, well under 500.
 
-CHUNK_SIZE = 800        # characters per chunk
-CHUNK_OVERLAP = 120     # characters shared between neighbouring chunks
+CHUNK_SIZE = 500        # characters per chunk, safety cap only
+CHUNK_OVERLAP = 80      # characters shared between neighbouring chunks, if the cap ever triggers
 
 
 # ─── Retrieval (Milestone 4) ─────────────────────────────────────────────────
