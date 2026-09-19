@@ -315,8 +315,63 @@ history does.
 `all-MiniLM-L6-v2`, and run the same test questions against both to see
 what actually moves — which results change rank, and whether my measured
 0.6 threshold (calibrated against MiniLM's distances in Milestone 4) still
-sits in a clean gap once distances come from a different model. Results go
-below once it's built.
+sits in a clean gap once distances come from a different model.
+
+**Built:** installed `sentence-transformers`, added
+`AI201_EMBEDDING_MODEL` as an env-driven override in `config.py` (the same
+pattern the starter already uses for `MODEL`), and indexed a second
+`--variant mpnet` of `campus_life` with `all-mpnet-base-v2` — a larger,
+768-dimension general-purpose model, versus MiniLM's 384. Ran the same ten
+questions from the Milestone 4 table against both.
+
+| Question | In corpus? | MiniLM | mpnet |
+|---|---|---|---|
+| How much printing quota does each student get per semester? | yes | 0.308 | 0.209 |
+| How often does the campus shuttle run on weekdays? | yes | 0.183 | 0.155 |
+| When can I change my meal plan tier? | yes | 0.216 | 0.243 |
+| Is the CS 210 final exam curved? | yes | 0.441 | 0.426 |
+| What's the best time to do laundry in Aldridge Hall? | yes | 0.123 | 0.136 |
+| What is the capital of Mongolia? | no | 0.787 | 0.790 |
+| How do I change the oil in a diesel engine? | no | 0.923 | 0.848 |
+| Who won the 1994 World Cup? | no | 0.847 | 0.895 |
+| What is the recommended dosage of ibuprofen for a headache? | no | 0.849 | 0.854 |
+| How do I write a for loop in Rust? | no | 0.860 | 0.799 |
+
+**What moved at the aggregate level:** less than I expected. The in-corpus
+group's worst distance goes from 0.441 (MiniLM) to 0.426 (mpnet); the
+out-of-scope group's best distance goes from 0.787 to 0.790. The gap
+between the two groups is actually about as wide under mpnet (0.426-0.790)
+as under MiniLM (0.441-0.787), and 0.6 still sits inside it comfortably.
+On this test set, at least, my measured threshold didn't need to move —
+which is itself worth writing down, since the general expectation (and the
+one I declared above) was that it would.
+
+**What moved underneath that, on the one question this corpus actually
+stresses:** the aggregate numbers hide a real regression. For "Is the CS
+210 final exam curved?", MiniLM's top-5 already had a sibling-document
+mixup (`course_cs_340_exams.txt` ranked #1), but the chunk that actually
+answers the question — "Two midterms and a final... the final is not
+[curved]" — still placed 3rd, at 0.466, safely inside top-5 and under the
+gate. Under mpnet, the *same chunk* drops to 14th place at 0.636 — outside
+both top-5 and the 0.6 cutoff — while mpnet's actual top-5 is dominated by
+other courses' exam-assessment paragraphs (`course_engl_205.txt`,
+`course_phys_130.txt` twice, `course_stat_150.txt`) that share sentence
+structure with the question but not its subject. Run end to end,
+`python app.py --variant mpnet ask "Is the CS 210 final exam curved?"`
+(with `AI201_EMBEDDING_MODEL=all-mpnet-base-v2` set) doesn't hallucinate —
+it correctly says it doesn't have enough information — but that's a
+question the MiniLM index answers correctly and cites right. A "better,"
+larger general-purpose model made this corpus's one hard case worse, not
+better: mpnet's larger vocabulary seems to weight the shared
+"course — assessment" phrasing across departments more heavily than
+MiniLM does, which is exactly the wrong signal for a corpus where the
+department name is the fact that matters.
+
+**Direction, overall:** of the 5 out-of-scope questions, 2 moved closer to
+the 0.6 cutoff under mpnet (diesel engine: 0.923 → 0.848; Rust for loop:
+0.860 → 0.799) — still safely above it here, but with less margin. Nothing
+in this comparison suggests mpnet is a clear upgrade for this corpus; if
+anything it's a lateral move with a worse worst-case.
 
 ---
 
