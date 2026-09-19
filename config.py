@@ -35,6 +35,10 @@ CHUNK_OVERLAP = 80      # characters shared between neighbouring chunks, if the 
 
 # ─── Retrieval (Milestone 4) ─────────────────────────────────────────────────
 
+# 5 chunks average 167 characters each on this corpus (see chunker.py), so
+# even top-5 is compact context. Confirmed against the one close case this
+# corpus produces: CS 210 vs. its CS 340 lookalike, where the right chunk
+# ranks 3rd — 5 leaves margin above that.
 TOP_K = 5               # how many chunks to pull back per question
 
 # The relevance gate. If the best chunk is further away than this, the system
@@ -42,9 +46,10 @@ TOP_K = 5               # how many chunks to pull back per question
 #
 # LOWER IS BETTER: 0.3 is a close match, 0.9 is unrelated.
 #
-# 0.6 is a reasonable starting point, not a right answer. Milestone 4 has you
-# measure your own two groups of distances and put the cutoff in the gap.
-# Most corpora land somewhere between 0.45 and 0.75.
+# Measured, not just kept at the default: my 5 in-corpus test questions best
+# out at 0.123-0.441; the 5 OUT_OF_SCOPE questions best out at 0.787-0.923.
+# That's a wide, clean gap, and 0.6 sits almost exactly in its middle. See
+# README.md's Sample Answer section for the full ten-question table.
 THRESHOLD = 0.6
 
 

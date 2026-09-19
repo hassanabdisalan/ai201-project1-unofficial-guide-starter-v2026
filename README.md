@@ -121,30 +121,44 @@ The good: cheapest housing tier by about $900 a year, and the singles are real s
 
 ## Sample Answer
 
-<!-- One complete question and answer, pasted as text, with the source line
-     visible. Milestone 4. -->
-
-**Question:**
+**Question:** What's the best time to do laundry in Aldridge Hall?
 
 **Answer:**
 
 ```
+The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning.
+
+Source: housing_aldridge_hall_laundry.txt
 ```
 
-**My relevance cutoff:**
+**My relevance cutoff:** 0.6 (the starter's default — measured, not just kept)
 
-<!-- The number you set in config.py, and how you got there.
-
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
-
-     Milestone 4. -->
+I ran my five test questions from `questions.py` and the five in
+`OUT_OF_SCOPE`, and recorded the single best distance for each with
+`python app.py retrieve "..." --top-k 1`, against the paragraph-based index
+from Milestone 3 (183 chunks). The five in-corpus questions land between
+0.123 and 0.441. The five out-of-scope questions land between 0.787 and
+0.923. That's a wide, clean gap — 0.346 wide, with nothing near either edge
+— so I kept the default 0.6, which sits almost exactly in the middle
+(0.614 would be the literal midpoint) rather than hugging either group.
+`TOP_K` also stays at the default of 5: on the one question where two
+courses' documents ranked close together (CS 210 vs. its CS 340 lookalike,
+below), the correct chunk still placed inside the top 3, so 5 gives margin
+above that without burying it in loosely related chunks — these chunks
+average only 167 characters each, so even 5 of them is compact context.
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| How much printing quota does each student get per semester? | yes | 0.308 |
+| How often does the campus shuttle run on weekdays? | yes | 0.183 |
+| When can I change my meal plan tier? | yes | 0.216 |
+| Is the CS 210 final exam curved? | yes | 0.441 |
+| What's the best time to do laundry in Aldridge Hall? | yes | 0.123 |
+| What is the capital of Mongolia? | no | 0.787 |
+| How do I change the oil in a diesel engine? | no | 0.923 |
+| Who won the 1994 World Cup? | no | 0.847 |
+| What is the recommended dosage of ibuprofen for a headache? | no | 0.849 |
+| How do I write a for loop in Rust? | no | 0.860 |
 
 ## How I Used AI
 
