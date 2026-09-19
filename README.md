@@ -210,10 +210,18 @@ independent call in this project was unrelated to modeling choices: when a
 push to my fork failed over GitHub's email-privacy protection, it offered
 three ways to fix it and I picked which one.
 
-<!-- ── Stretch features ─────────────────────────────────────────────────────
-     Doing one? Say so here BEFORE you start. A feature this README never
-     claims earns nothing.
-     ───────────────────────────────────────────────────────────────────────── -->
+## Stretch Feature: Metadata Filtering
+
+**Declared before building (see commit history for the timestamp on this
+line vs. the implementation commit).** `campus_life` filenames already carry
+a natural category in their prefix — `admin` (16 docs), `advising` (1),
+`course` (27), `dining` (14), `health` (1), `housing` (21), `money` (2),
+`orientation` (1), `study` (2), `transit` (2), `winter` (1). I'm going to
+store that prefix as a `category` metadata field on
+every chunk at index time, and let `app.py retrieve` / `app.py ask` take a
+`--category NAME` flag that narrows Chroma's search with a `where` clause
+before distances are computed. The write-up of what changed goes in this
+section once it's built — see below.
 
 ---
 
