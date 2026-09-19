@@ -281,7 +281,7 @@ Rules:
 - Be brief. Two or three sentences is usually enough."""
 
 
-def build_prompt(question: str, results) -> str:
+def build_prompt(question: str, results, history: list[dict] | None = None) -> str:
     """
     Assemble the grounded prompt out of retrieved chunks.
 
@@ -289,18 +289,37 @@ def build_prompt(question: str, results) -> str:
     being sent — `python app.py ask "..." --show-prompt` prints exactly what
     this returns. Reading it once is the fastest way to see that retrieval,
     not the model, decides what an answer can possibly be based on.
+
+    `history` (stretch: conversational memory) is the prior turns in this
+    session, each `{"question": ..., "answer": ...}`. It's kept separate from
+    the documents on purpose — it's context for resolving what the new
+    question means, not itself something to answer from. The grounding
+    instruction still says "use only the documents," so a model that follows
+    it can use history to understand "what about Sundays?" without treating
+    the previous answer as a source of facts.
     """
     context = "\n\n".join(
         f"[from {r.source}]\n{r.text}" for r in results
     )
+    history_block = ""
+    if history:
+        turns = "\n\n".join(
+            f"Q: {h['question']}\nA: {h['answer']}" for h in history
+        )
+        history_block = (
+            f"Previous conversation (for context only, not a source):\n\n"
+            f"{turns}\n\n---\n\n"
+        )
     return (
-        f"Documents:\n\n{context}\n\n"
+        f"{history_block}Documents:\n\n{context}\n\n"
         f"---\n\nQuestion: {question}\n\n"
         f"Answer using only the documents above, and name the file you used."
     )
 
 
-def answer_from_chunks(question: str, results, cache: bool = True) -> str:
+def answer_from_chunks(
+    question: str, results, cache: bool = True, history: list[dict] | None = None
+) -> str:
     """
     Build a grounded prompt out of retrieved chunks and send it.
 
@@ -308,5 +327,5 @@ def answer_from_chunks(question: str, results, cache: bool = True) -> str:
     first — it has already decided these chunks are close enough to be worth
     answering from.
     """
-    prompt = build_prompt(question, results)
+    prompt = build_prompt(question, results, history=history)
     return generate(prompt, system=GROUNDING_INSTRUCTION, cache=cache)

@@ -269,7 +269,43 @@ one together as the retrieval query (so a vague follow-up like "what about
 Sundays?" still retrieves the right chunk instead of nothing), and pass the
 actual prior Q&A into the model's prompt as conversation history so it can
 resolve pronouns and references the new question doesn't spell out.
-Write-up of the two-turn exchange goes below once it's built.
+**Built:** `app.py`'s interactive loop keeps a capped list of the last 3
+`{question, answer}` turns. `ask_pipeline` uses `f"{previous question} {new
+question}"` as the retrieval query when history exists (see `app.py`), so a
+vague follow-up still carries the topic into the embedding. Separately,
+`generate.py::build_prompt` puts the real prior Q&A into the prompt as
+"Previous conversation (for context only, not a source)" — kept apart from
+the retrieved documents so the model resolves references from it without
+treating a past answer as a fact to cite.
+
+**Two-turn exchange, second answer depending on the first:**
+
+```
+> What's the best time to do laundry in Aldridge Hall?
+  (best distance 0.123, cutoff 0.6)
+
+The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning.
+
+Source: housing_aldridge_hall_laundry.txt
+
+> What about on Sundays?
+  (best distance 0.143, cutoff 0.6)
+
+Based on the provided documents, if you do laundry on Sunday after 6pm, you will have to wait.
+
+Sources: housing_aldridge_hall_laundry.txt (and other laundry documents retrieved alongside it)
+```
+
+**Proof it's the history doing the work, not shared vocabulary:** asking
+the exact same follow-up with no prior turn —
+`python app.py ask "What about on Sundays?"` — retrieves nothing about
+laundry at all. It comes back with Halden Hall's Sunday dining closure,
+the weekend shuttle schedule, and winter path-clearing, at a best distance
+of 0.574 (barely under the 0.6 cutoff — one differently-worded question
+away from being refused entirely). With the previous turn in history, the
+same words retrieve the correct Aldridge Hall laundry chunk at 0.143. The
+question's own words never mention laundry or Aldridge Hall; only the
+history does.
 
 ## Stretch Feature: A Second Embedding Model
 

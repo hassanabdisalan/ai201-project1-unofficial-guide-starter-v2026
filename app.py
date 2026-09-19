@@ -184,6 +184,7 @@ def ask_pipeline(
     top_k=None,
     threshold=None,
     category=None,
+    history=None,
     on_gate=None,
     on_prompt=None,
 ):
@@ -201,13 +202,25 @@ def ask_pipeline(
     decision as soon as it's made, and `on_prompt` is handed the assembled
     prompt just before it goes out — that's how `--show-prompt` shows you the
     prompt while the model is still thinking rather than after.
+
+    `history` (stretch: conversational memory) is prior turns in this session,
+    each `{"question": ..., "answer": ...}`, oldest first. Retrieval uses the
+    previous question plus this one, concatenated, as its search text — a bare
+    follow-up like "what about Sundays?" carries too little on its own to
+    retrieve the right chunk, but "<previous question> what about Sundays?"
+    does. Generation gets the real history as separate conversational context,
+    not as something to answer from — see `generate.py::build_prompt`.
     """
     from store import search
     import gate
     from generate import answer_from_chunks, build_prompt
 
+    search_text = question
+    if history:
+        search_text = f"{history[-1]['question']} {question}"
+
     results = search(
-        question,
+        search_text,
         top_k=top_k or config.TOP_K,
         corpus=corpus or config.CORPUS,
         variant=variant,
@@ -230,12 +243,12 @@ def ask_pipeline(
         outcome["answer"] = gate.REFUSAL
         return outcome
 
-    prompt = build_prompt(question, results)
+    prompt = build_prompt(question, results, history=history)
     if on_prompt is not None:
         on_prompt(prompt)
 
     outcome["prompt"] = prompt
-    outcome["answer"] = answer_from_chunks(question, results)
+    outcome["answer"] = answer_from_chunks(question, results, history=history)
     outcome["sources"] = sorted({r.source for r in results})
     return outcome
 
@@ -247,6 +260,7 @@ def _ask_one(
     top_k,
     threshold,
     category=None,
+    history=None,
     show_distances=True,
     show_prompt=False,
 ):
@@ -275,17 +289,18 @@ def _ask_one(
         top_k=top_k,
         threshold=threshold,
         category=category,
+        history=history,
         on_gate=print_distances if show_distances else None,
         on_prompt=print_prompt if show_prompt else None,
     )
 
     if outcome["refused"]:
         print(f"\n{gate.REFUSAL}\n")
-        return gate.REFUSAL
+        return outcome
 
     print(f"\n{outcome['answer']}\n")
     print(f"Sources retrieved: {', '.join(outcome['sources'])}\n")
-    return outcome["answer"]
+    return outcome
 
 
 def cmd_ask(args):
@@ -305,6 +320,11 @@ def cmd_ask(args):
             )
         else:
             print("Ask a question, or press Enter on an empty line to quit.\n")
+            # Stretch: conversational memory. Only the interactive loop has
+            # more than one turn to remember, so history lives here, not in
+            # ask_pipeline. Capped at 3 turns so the prompt doesn't grow
+            # without bound over a long session.
+            history: list[dict] = []
             while True:
                 try:
                     question = input("> ").strip()
@@ -313,15 +333,19 @@ def cmd_ask(args):
                     break
                 if not question:
                     break
-                _ask_one(
+                outcome = _ask_one(
                     question,
                     corpus,
                     args.variant,
                     args.top_k,
                     args.threshold,
                     category=args.category,
+                    history=history,
                     show_prompt=args.show_prompt,
                 )
+                if not outcome["refused"]:
+                    history.append({"question": question, "answer": outcome["answer"]})
+                    del history[:-3]
     finally:
         print(gen.usage())
 
