@@ -210,6 +210,36 @@ independent call in this project was unrelated to modeling choices: when a
 push to my fork failed over GitHub's email-privacy protection, it offered
 three ways to fix it and I picked which one.
 
+**3. Testing, diagnosis, and the improvement (Week 2, Milestones 1-4).** I
+asked it to run the full evaluation, build the criterion-level run log from
+`run_eval.py`'s raw output, and judge each verdict, since `scorer.py` was
+never built. The part worth flagging specifically: for criterion 1, it
+didn't stop at "the right document's filename is in the sources list." On
+its own initiative, it re-ran `app.py retrieve` directly on the CS 210
+question — the one case `criteria.md` predicted might be close — to check
+which specific *chunk* (not just which document) actually made the top-5,
+since `course_cs_210.txt` splits into three separate chunks and only one
+contains the curve fact. That's how the diagnosis ended up naming a real
+mechanism (a sibling document winning on phrasing similarity, differing
+from the real answer mainly in one exact token) instead of a vaguer
+"retrieval is a little off for this one."
+
+When I asked for one improvement connected to that diagnosis, it picked
+hybrid search (BM25 + semantic, combined by reciprocal rank fusion) and
+was explicit about preserving the gate's calibration — keeping
+`Result.distance` as the true semantic distance rather than some fused
+score the 0.6 cutoff was never calibrated against. After running the
+before/after comparison, it noticed on its own that my five original
+criteria didn't move at all (5/5 both times) and, rather than either
+overstating that as "no effect" or quietly calling it a wash, went back to
+raw chunk rankings to check whether the specific mechanism it targeted had
+actually moved — which it had, at rank 1 specifically. That self-check, and
+then reporting the two things hybrid search cost (generic-word noise in
+ranks 2-5, and a less-pure "best distance" number for the gate) instead of
+only reporting the win, is closer to it catching its own potential overclaim
+than me catching a mistake it made. I reviewed and accepted all of it rather
+than re-deriving the retrieval rankings myself.
+
 ## Stretch Feature: Metadata Filtering
 
 **Declared before building (see commit history for the timestamp on this
@@ -718,17 +748,84 @@ the nearest thing in the corpus" than it was before.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
+No criterion is currently MISSED, before or after the fix, so this section
+isn't a list of failures — it's the honest list of things I found and chose
+not to touch this unit, either because the one-change rule meant I'd already
+spent my fix, or because nothing actually failed on them yet.
 
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
+**1. The Tamsin Court chunk still mixes two facts (criterion 4's blind
+spot).** `housing_tamsin_court.txt#3` — laundry and noise glued into one
+chunk — is unchanged. I didn't fix it because it's a single-document
+symptom of a corpus-authoring issue (that document's own paragraph mixes
+two topics with no `\n\n` between them), not a chunker bug, and I already
+used this unit's one allowed change on hybrid search, which addressed the
+near-miss I'd actually verified was closer to failing (CS 210). If I keep
+working on this: either hand-split that one paragraph in the source
+document, or add a chunker heuristic that looks for a topic-shift sentence
+(e.g. a sentence starting "On noise:" after a laundry sentence) and splits
+on it even without a `\n\n`. I'd want to see at least one more example of
+this pattern elsewhere in the corpus before writing that heuristic, though —
+one instance isn't enough to justify a general rule, and I haven't gone
+looking for a second one yet.
 
-     Milestone 5. -->
+**2. Hybrid search's own cost: generic-word noise in ranks 2–5.** Milestone
+4 found that BM25 pulls documents into the middle of the results purely on
+shared common words ("student," "per") rather than meaningful ones. It
+never changed a final answer or a citation in this test round, so no
+criterion caught it, but it's a real, unaddressed cost of the fix I shipped.
+The standard remedy is IDF-weighted down-weighting of common terms or a
+stopword list before tokenizing for BM25 — `_tokenize` in `store.py` doesn't
+do either right now. I didn't add it because it would have been a second
+change to the same commit, which is exactly what Milestone 4 says not to do.
+
+**3. The gate's "best distance" is a slightly less pure number now.** Also
+from Milestone 4: since the gate checks the minimum distance within the
+*fused* top-k rather than the single closest chunk in the whole collection,
+an out-of-scope question's reported distance can shift (0.787 → 0.826 for
+"capital of Mongolia") even though nothing about how unrelated it is
+changed. It never flipped a refusal, so criterion 3 doesn't see it, but if I
+were extending this system I'd compute the gate from the full un-fused
+semantic nearest-neighbor specifically, decoupled from whatever hybrid
+search does to the top-k that gets sent to generation — those are two
+different questions ("is this in-corpus at all" vs. "which chunks answer
+it best") that are currently sharing one number by coincidence of
+implementation, not by design.
+
+**4. Five test questions is a small net.** Every verdict in this README
+rests on 5 in-corpus and 5 out-of-scope questions. That was the right size
+to *write* criteria against in Week 1, but it means a MET verdict here is a
+claim about this specific, small sample, not a guarantee that a sixth
+question wouldn't surface something new. I stopped at 5 because that's what
+the assignment specifies, not because I think 5 is enough to be confident
+in — it's the honest boundary of what this test round can tell me.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
+**Criterion 1 (retrieved chunk contains the answer) — I'd write it around
+rank, not presence.** "In the top 5" turned out to have so much slack that
+even the corpus's one deliberately-engineered hard case (CS 210 vs. CS 340)
+passed it before *and* after the fix, with nothing to distinguish them. The
+version that actually moved between before and after — "the #1-ranked
+chunk contains the answer" — is what I'd write next time. It's a harder bar
+(4/5 might be the realistic target, not 5/5, since the printing-quota and
+meal-plan questions have less obviously-dominant #1 candidates than the
+laundry question does), but a criterion that can't distinguish a fixed
+pipeline from a broken one isn't earning its place.
 
-     Milestone 5. -->
+**Criterion 4 (chunks read as complete thoughts) — I'd test cohesion, not
+just boundaries.** "Nothing cut mid-word or mid-clause" is a real thing to
+check, but it turned out to be almost impossible to fail on this corpus —
+`split_documents` never mangles a string, it just sometimes reproduces a
+source paragraph that was already mixing two topics. What I actually cared
+about when I wrote this criterion in Week 1 was "does one chunk answer one
+question," and boundary integrity isn't a proxy for that. Next time:
+"for at least 4 of 5 sampled chunks, I can state what the chunk is about in
+one clause, with no second, unrelated clause mixed in" — same sampling
+method, a bar that actually tests the thing I meant.
+
+**Criteria 2, 3, and 5 I'd leave as written.** None of them had slack I
+could find evidence for this round — 2 held at an exact 5/5 with no
+wording variance, 3 held with real margin (0.19+) on its closest
+out-of-scope question, and 5 held cleanly on the one sibling pair it was
+built to stress. Tightening a criterion just because the other two needed
+it would be inventing a problem rather than reporting one.
