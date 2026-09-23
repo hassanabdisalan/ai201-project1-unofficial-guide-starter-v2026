@@ -829,3 +829,56 @@ wording variance, 3 held with real margin (0.19+) on its closest
 out-of-scope question, and 5 held cleanly on the one sibling pair it was
 built to stress. Tightening a criterion just because the other two needed
 it would be inventing a problem rather than reporting one.
+
+## Stretch Feature: A Second Measured Improvement — Decoupling the Gate from Hybrid Fusion
+
+**Declared before building** (see commit history for the timestamp on this
+line vs. the implementation commit). "What's Still Broken" above names a
+real, unaddressed side effect of Milestone 4's hybrid-search fix: the
+relevance gate now reports the minimum distance within the *fused* top-k,
+not the true closest chunk in the whole collection, because a BM25-favored
+chunk can push the single nearest semantic match out of the top-k entirely.
+Three of the five `OUT_OF_SCOPE` questions' reported best-distances already
+shifted because of this (e.g. "capital of Mongolia": 0.787 → 0.826) even
+though nothing about how unrelated they are changed.
+
+I'm going to give the gate its own cheap, semantic-only lookup —
+`store.py::semantic_best_distance` — a single top-1 Chroma query with no
+BM25 involved, so "is this question in-corpus at all" (the gate's job,
+calibrated in Week 1 against pure cosine distance) is answered independently
+of "which chunks best answer it" (hybrid retrieval's job, Milestone 4). Right
+now those two questions are sharing one number by accident of implementation,
+not by design. I expect this to restore the three shifted out-of-scope
+distances to their original pre-hybrid values and to leave everything
+Milestone 4 fixed (the CS 210 rank-1 result) untouched, since generation
+still gets its chunks from the same fused `search()` as before — only the
+gate's own number changes.
+
+**Built:** added `store.py::semantic_best_distance(question, corpus, variant,
+category)` — a single `collection.query(..., n_results=1)` call with no BM25
+mixed in, returning just the nearest neighbour's raw cosine distance.
+`gate.py::check` now takes an optional `best_distance` override parameter;
+when given, it's used directly instead of being recomputed from the
+retrieved `results` list. `app.py::ask_pipeline`, `app.py::cmd_retrieve`,
+`run_eval.py::run_once`, and `run_eval.py::check_out_of_scope` all now call
+`semantic_best_distance` with the same query text they pass to `search()`,
+and hand the result to `gate.check` as `best_distance`. `search()` itself —
+and therefore what generation sees — is untouched.
+
+### Run Log — Second Improvement
+
+Produced the same way as Before/After: `python run_eval.py --label
+after-gate-fix`, 3 runs per question, caching off, same corpus/top-k/
+threshold. Full transcript: `results/run_2026-09-24_0301_after-gate-fix.md`.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks read as complete thoughts, not fragments | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. The cited source is the one that actually contains the fact | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+**Did it help?** Placeholder pending the run — filled in below once
+`run_eval.py --label after-gate-fix` has actually been executed against the
+new code.
