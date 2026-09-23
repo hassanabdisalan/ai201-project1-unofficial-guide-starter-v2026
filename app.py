@@ -146,13 +146,14 @@ def cmd_chunks(args):
 
 def cmd_retrieve(args):
     """Milestone 4. Retrieval only, with distances, and no model call."""
-    from store import search
+    from store import search, semantic_best_distance
     import gate
 
+    corpus = args.corpus or config.CORPUS
     results = search(
         args.question,
         top_k=args.top_k or config.TOP_K,
-        corpus=args.corpus or config.CORPUS,
+        corpus=corpus,
         variant=args.variant,
         category=args.category,
     )
@@ -169,7 +170,10 @@ def cmd_retrieve(args):
         preview = r.text[:52].replace("\n", " ")
         print(f"{i:<3} {r.distance:<10.4f} {r.source:<32} {preview}...")
 
-    decision = gate.check(results)
+    best_distance = semantic_best_distance(
+        args.question, corpus=corpus, variant=args.variant, category=args.category
+    )
+    decision = gate.check(results, best_distance=best_distance)
     print(f"\nGate: {decision.explanation}")
     print("\nLower is better. 0.3 is a close match, 0.9 is unrelated.")
     print("Milestone 4: run your five questions, then the five in OUT_OF_SCOPE")
@@ -211,7 +215,7 @@ def ask_pipeline(
     does. Generation gets the real history as separate conversational context,
     not as something to answer from — see `generate.py::build_prompt`.
     """
-    from store import search
+    from store import search, semantic_best_distance
     import gate
     from generate import answer_from_chunks, build_prompt
 
@@ -219,14 +223,18 @@ def ask_pipeline(
     if history:
         search_text = f"{history[-1]['question']} {question}"
 
+    resolved_corpus = corpus or config.CORPUS
     results = search(
         search_text,
         top_k=top_k or config.TOP_K,
-        corpus=corpus or config.CORPUS,
+        corpus=resolved_corpus,
         variant=variant,
         category=category,
     )
-    decision = gate.check(results, threshold=threshold)
+    best_distance = semantic_best_distance(
+        search_text, corpus=resolved_corpus, variant=variant, category=category
+    )
+    decision = gate.check(results, threshold=threshold, best_distance=best_distance)
     if on_gate is not None:
         on_gate(decision)
 

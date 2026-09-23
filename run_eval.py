@@ -53,12 +53,13 @@ def load_scorer():
 
 def run_once(question: str, top_k, threshold, corpus, variant):
     """One question, one run. Returns the answer and what retrieval gave us."""
-    from store import search
+    from store import search, semantic_best_distance
     import gate
     from generate import answer_from_chunks
 
     results = search(question, top_k=top_k, corpus=corpus, variant=variant)
-    decision = gate.check(results, threshold=threshold)
+    best_distance = semantic_best_distance(question, corpus=corpus, variant=variant)
+    decision = gate.check(results, threshold=threshold, best_distance=best_distance)
 
     if not decision.passed:
         return gate.REFUSAL, results, decision
@@ -148,7 +149,7 @@ def check_out_of_scope(top_k, threshold, corpus, variant):
     call and no reason to run it three times — retrieval is deterministic and
     the gate is a comparison against a fixed number.
     """
-    from store import search
+    from store import search, semantic_best_distance
     import gate
 
     questions = getattr(qs, "OUT_OF_SCOPE", [])
@@ -159,7 +160,8 @@ def check_out_of_scope(top_k, threshold, corpus, variant):
     rows = []
     for question in questions:
         results = search(question, top_k=top_k, corpus=corpus, variant=variant)
-        decision = gate.check(results, threshold=threshold)
+        best_distance = semantic_best_distance(question, corpus=corpus, variant=variant)
+        decision = gate.check(results, threshold=threshold, best_distance=best_distance)
         refused = not decision.passed
         print(f"  {'refused' if refused else 'LET THROUGH'}  "
               f"(best distance {decision.best_distance:.3f})  {question}")

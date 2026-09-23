@@ -42,17 +42,34 @@ class GateDecision:
         )
 
 
-def check(results: list[Result], threshold: float | None = None) -> GateDecision:
+def check(
+    results: list[Result],
+    threshold: float | None = None,
+    best_distance: float | None = None,
+) -> GateDecision:
     """
     Decide whether the retrieved chunks are close enough to answer from.
 
     Remember: LOWER distance is better. A question passes when its best chunk
     is *under* the threshold.
+
+    `best_distance` (stretch: a second measured improvement) lets a caller
+    supply the true semantic nearest-neighbour distance directly — see
+    `store.py::semantic_best_distance` — instead of it being recomputed from
+    `results`. That matters once retrieval does hybrid fusion (Milestone 4):
+    the fused top-k a caller passes in for `results` might not contain the
+    single closest chunk in the whole collection at all, if it had no
+    keyword overlap with the question. Passing `best_distance` keeps the
+    gate checking the one number it was calibrated against, independent of
+    whatever ranking `search()` used to pick `results`.
     """
     threshold = config.THRESHOLD if threshold is None else threshold
 
-    if not results:
-        return GateDecision(passed=False, best_distance=1.0, threshold=threshold)
+    if best_distance is None:
+        if not results:
+            return GateDecision(passed=False, best_distance=1.0, threshold=threshold)
+        best_distance = min(r.distance for r in results)
 
-    best = min(r.distance for r in results)
-    return GateDecision(passed=best < threshold, best_distance=best, threshold=threshold)
+    return GateDecision(
+        passed=best_distance < threshold, best_distance=best_distance, threshold=threshold
+    )

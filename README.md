@@ -778,18 +778,18 @@ stopword list before tokenizing for BM25 — `_tokenize` in `store.py` doesn't
 do either right now. I didn't add it because it would have been a second
 change to the same commit, which is exactly what Milestone 4 says not to do.
 
-**3. The gate's "best distance" is a slightly less pure number now.** Also
-from Milestone 4: since the gate checks the minimum distance within the
-*fused* top-k rather than the single closest chunk in the whole collection,
-an out-of-scope question's reported distance can shift (0.787 → 0.826 for
-"capital of Mongolia") even though nothing about how unrelated it is
-changed. It never flipped a refusal, so criterion 3 doesn't see it, but if I
-were extending this system I'd compute the gate from the full un-fused
-semantic nearest-neighbor specifically, decoupled from whatever hybrid
-search does to the top-k that gets sent to generation — those are two
-different questions ("is this in-corpus at all" vs. "which chunks answer
-it best") that are currently sharing one number by coincidence of
-implementation, not by design.
+**3. ~~The gate's "best distance" is a slightly less pure number now.~~ Fixed
+below, as the second stretch improvement.** This originally read: since the
+gate checks the minimum distance within the *fused* top-k rather than the
+single closest chunk in the whole collection, an out-of-scope question's
+reported distance can shift (0.787 → 0.826 for "capital of Mongolia") even
+though nothing about how unrelated it is changed. It never flipped a
+refusal, so criterion 3 never saw it, but it was exactly the kind of thing
+worth fixing on its own: "is this in-corpus at all" and "which chunks answer
+it best" are two different questions that were sharing one number by
+coincidence of implementation, not by design. See "Stretch Feature: A
+Second Measured Improvement" below for the fix and its own before/after
+comparison.
 
 **4. Five test questions is a small net.** Every verdict in this README
 rests on 5 in-corpus and 5 out-of-scope questions. That was the right size
@@ -869,7 +869,8 @@ and therefore what generation sees — is untouched.
 
 Produced the same way as Before/After: `python run_eval.py --label
 after-gate-fix`, 3 runs per question, caching off, same corpus/top-k/
-threshold. Full transcript: `results/run_2026-09-24_0301_after-gate-fix.md`.
+threshold. Full transcript:
+`results/run_2026-09-24_0240_after-gate-fix.md`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
@@ -879,6 +880,48 @@ threshold. Full transcript: `results/run_2026-09-24_0301_after-gate-fix.md`.
 | 4. Chunks read as complete thoughts, not fragments | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 | 5. The cited source is the one that actually contains the fact | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-**Did it help?** Placeholder pending the run — filled in below once
-`run_eval.py --label after-gate-fix` has actually been executed against the
-new code.
+Produced by `run_eval.py::check_out_of_scope` calling the new
+`store.py::semantic_best_distance`, cutoff 0.6:
+
+```
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.787 | refused |
+| How do I change the oil in a diesel engine? | 0.923 | refused |
+| Who won the 1994 World Cup? | 0.847 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.849 | refused |
+| How do I write a for loop in Rust? | 0.860 | refused |
+```
+
+**Did it help?** Yes, exactly as predicted, and this time the numbers show
+it directly instead of needing a side lookup. Same criterion table as
+Before and After — still 5/5 across the board — because nothing here was
+broken at the criterion level either. But the specific number the
+declaration predicted moved back:
+
+| Out-of-scope question | Before hybrid | After hybrid (Milestone 4) | After gate fix |
+|---|---|---|---|
+| Capital of Mongolia | 0.787 | 0.826 | **0.787** |
+| Diesel engine oil change | 0.923 | 0.934 | **0.923** |
+| 1994 World Cup | 0.847 | 0.847 | 0.847 |
+| Ibuprofen dosage | 0.849 | 0.849 | 0.849 |
+| Rust for loop | 0.860 | 0.877 | **0.860** |
+
+All three distances that hybrid search had shifted are back to their exact
+pre-hybrid values — the gate is once again reporting the true nearest
+semantic neighbour, not the minimum within a fused top-k. The two that
+hadn't moved stayed put, which is what should happen if this change touches
+only the gate's own number and nothing else. I also re-checked the CS 210
+case specifically to confirm the fix didn't undo Milestone 4's win:
+`app.py retrieve "Is the CS 210 final exam curved?"` still ranks
+`course_cs_210_exams.txt` at #1, because that check runs through `search()`
+(hybrid, unchanged) and this improvement only touches what `gate.check`
+sees, not what generation sees.
+
+No criterion moved, because no criterion was built to notice a change in
+number purity rather than a change in pass/fail — the same shape of result
+as Milestone 4, and for the same reason. What this improvement bought is
+narrower than Milestone 4's: not a different retrieval outcome, but a
+gate whose calibration (Week 1's 0.6, measured against pure cosine
+distance) means what it originally meant again, independent of whatever
+`search()` does internally.

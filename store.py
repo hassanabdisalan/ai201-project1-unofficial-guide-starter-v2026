@@ -310,6 +310,46 @@ def search(
     return results
 
 
+def semantic_best_distance(
+    question: str,
+    corpus: str | None = None,
+    variant: str = "default",
+    category: str | None = None,
+) -> float:
+    """
+    The true nearest neighbour, semantic-only — no BM25 involved.
+
+    Stretch: a second measured improvement. The relevance gate answers a
+    different question than retrieval does ("is this in-corpus at all," not
+    "which chunks best answer it") and its 0.6 threshold was calibrated
+    against pure cosine distance in Week 1. `search`'s hybrid fusion can
+    leave the single closest chunk out of the top-k entirely if it has no
+    keyword overlap with the question, which quietly changes what the
+    gate's reported distance means. This function exists so the gate can
+    keep checking the one number it was actually calibrated against,
+    independent of whatever `search` does to rank chunks for generation.
+    """
+    name = config.collection_name(corpus, variant)
+    try:
+        collection = _client().get_collection(name)
+    except Exception as exc:
+        raise RuntimeError(
+            f"No index called '{name}'. Run `python app.py index` first."
+        ) from exc
+
+    if collection.count() == 0:
+        return 1.0
+
+    where = {"category": category} if category else None
+    raw = collection.query(
+        query_embeddings=embed([question]),
+        n_results=1,
+        where=where,
+    )
+    distances = raw["distances"][0]
+    return float(distances[0]) if distances else 1.0
+
+
 def index_exists(corpus: str | None = None, variant: str = "default") -> bool:
     """Is there an index here to search, without searching it?
 

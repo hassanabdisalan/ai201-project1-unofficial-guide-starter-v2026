@@ -1,0 +1,201 @@
+# Run log — after-gate-fix
+
+- Produced by: `run_eval.py::main`
+- Retrieval: `store.py::search`, chunks from `chunker.py::split_documents`
+- Corpus: `campus_life` (index variant `default`)
+- top-k: 5 · relevance cutoff: 0.6
+- Runs per question: 3, caching off
+- When: 2026-09-24 02:40
+
+This table is one row per QUESTION. The run log your README asks for is
+one row per CRITERION, so aggregate these into it — criterion 1 is how many
+of your questions had the answer in the retrieved chunks, and so on.
+
+| Question | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| How much printing quota does each student get per semester? |   |   |   |
+| How often does the campus shuttle run on weekdays? |   |   |   |
+| When can I change my meal plan tier? |   |   |   |
+| Is the CS 210 final exam curved? |   |   |   |
+| What's the best time to do laundry in Aldridge Hall? |   |   |   |
+
+> The Run columns are blank because `scorer.py` doesn't exist yet.
+> Judge each question yourself by reading the output below, or build
+> the scorer first and re-run.
+
+---
+
+## The relevance gate on out-of-corpus questions
+
+Produced by `run_eval.py::check_out_of_scope`, cutoff 0.6. Refused 5 of 5.
+
+Retrieval is deterministic and the gate is a comparison against a
+fixed number, so these do not vary between runs — one pass over the
+list is the whole measurement.
+
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.787 | refused |
+| How do I change the oil in a diesel engine? | 0.923 | refused |
+| Who won the 1994 World Cup? | 0.847 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.849 | refused |
+| How do I write a for loop in Rust? | 0.860 | refused |
+
+---
+
+## Real output
+
+This is what the system actually produced. Paste the relevant parts
+into your README underneath the table — the rubric asks for real
+output as text, not a description of it.
+
+### How much printing quota does each student get per semester? — run 1
+
+- Best distance: 0.3077 (passed the gate)
+- Sources retrieved: admin_printing_quota.txt, admin_wifi_and_accounts.txt, money_jobs.txt, money_textbooks.txt, study_group_rooms.txt
+
+```
+Each student gets $30 of printing per semester, which is about 600 black-and-white pages (admin_printing_quota.txt).
+```
+
+### How much printing quota does each student get per semester? — run 2
+
+- Best distance: 0.3077 (passed the gate)
+- Sources retrieved: admin_printing_quota.txt, admin_wifi_and_accounts.txt, money_jobs.txt, money_textbooks.txt, study_group_rooms.txt
+
+```
+Each student gets $30 of printing per semester, which is about 600 black-and-white pages. 
+
+Source: admin_printing_quota.txt
+```
+
+### How much printing quota does each student get per semester? — run 3
+
+- Best distance: 0.3077 (passed the gate)
+- Sources retrieved: admin_printing_quota.txt, admin_wifi_and_accounts.txt, money_jobs.txt, money_textbooks.txt, study_group_rooms.txt
+
+```
+Each student gets $30 of printing per semester, which is about 600 black-and-white pages. (Source: admin_printing_quota.txt)
+```
+
+### How often does the campus shuttle run on weekdays? — run 1
+
+- Best distance: 0.1825 (passed the gate)
+- Sources retrieved: dining_the_atrium.txt, dining_verrill_street_grill.txt, money_jobs.txt, transit_shuttle.txt, winter_gear.txt
+
+```
+On weekdays, the campus shuttle runs a loop every 20 minutes from 7am to 11pm (Source: transit_shuttle.txt).
+```
+
+### How often does the campus shuttle run on weekdays? — run 2
+
+- Best distance: 0.1825 (passed the gate)
+- Sources retrieved: dining_the_atrium.txt, dining_verrill_street_grill.txt, money_jobs.txt, transit_shuttle.txt, winter_gear.txt
+
+```
+On weekdays, the campus shuttle runs a loop every 20 minutes (transit_shuttle.txt).
+```
+
+### How often does the campus shuttle run on weekdays? — run 3
+
+- Best distance: 0.1825 (passed the gate)
+- Sources retrieved: dining_the_atrium.txt, dining_verrill_street_grill.txt, money_jobs.txt, transit_shuttle.txt, winter_gear.txt
+
+```
+The campus shuttle runs a loop every 20 minutes on weekdays (from transit_shuttle.txt).
+```
+
+### When can I change my meal plan tier? — run 1
+
+- Best distance: 0.2161 (passed the gate)
+- Sources retrieved: admin_meal_plan_changes.txt, dining_north_kitchen.txt, dining_pellew_dining_hall.txt, dining_the_ridgeway_cafe.txt, housing_fenwick_court.txt
+
+```
+You can change your meal plan tier once, during the first ten days of the semester (admin_meal_plan_changes.txt). After that time, it is locked.
+```
+
+### When can I change my meal plan tier? — run 2
+
+- Best distance: 0.2161 (passed the gate)
+- Sources retrieved: admin_meal_plan_changes.txt, dining_north_kitchen.txt, dining_pellew_dining_hall.txt, dining_the_ridgeway_cafe.txt, housing_fenwick_court.txt
+
+```
+You can change your meal plan tier once, during the first ten days of the semester. 
+
+Source: `admin_meal_plan_changes.txt`
+```
+
+### When can I change my meal plan tier? — run 3
+
+- Best distance: 0.2161 (passed the gate)
+- Sources retrieved: admin_meal_plan_changes.txt, dining_north_kitchen.txt, dining_pellew_dining_hall.txt, dining_the_ridgeway_cafe.txt, housing_fenwick_court.txt
+
+```
+You can change your meal plan tier once, during the first ten days of the semester. 
+
+Source: `admin_meal_plan_changes.txt`
+```
+
+### Is the CS 210 final exam curved? — run 1
+
+- Best distance: 0.4409 (passed the gate)
+- Sources retrieved: course_cs_210.txt, course_cs_210_exams.txt, course_cs_340.txt, course_cs_340_exams.txt
+
+```
+No, the CS 210 final exam is not curved (source: `course_cs_210.txt` and `course_cs_210_exams.txt`).
+```
+
+### Is the CS 210 final exam curved? — run 2
+
+- Best distance: 0.4409 (passed the gate)
+- Sources retrieved: course_cs_210.txt, course_cs_210_exams.txt, course_cs_340.txt, course_cs_340_exams.txt
+
+```
+No, the CS 210 final exam is not curved. 
+
+Source: `course_cs_210.txt` (and `course_cs_210_exams.txt`)
+```
+
+### Is the CS 210 final exam curved? — run 3
+
+- Best distance: 0.4409 (passed the gate)
+- Sources retrieved: course_cs_210.txt, course_cs_210_exams.txt, course_cs_340.txt, course_cs_340_exams.txt
+
+```
+No, the CS 210 final exam is not curved. 
+
+Source: `course_cs_210.txt` (and `course_cs_210_exams.txt`)
+```
+
+### What's the best time to do laundry in Aldridge Hall? — run 1
+
+- Best distance: 0.1226 (passed the gate)
+- Sources retrieved: housing_aldridge_hall_laundry.txt, housing_calder_annexe_laundry.txt, housing_innisfree_hall_laundry.txt, housing_morrow_house_laundry.txt, housing_old_brewhouse_laundry.txt
+
+```
+The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning. 
+
+Source: housing_aldridge_hall_laundry.txt
+```
+
+### What's the best time to do laundry in Aldridge Hall? — run 2
+
+- Best distance: 0.1226 (passed the gate)
+- Sources retrieved: housing_aldridge_hall_laundry.txt, housing_calder_annexe_laundry.txt, housing_innisfree_hall_laundry.txt, housing_morrow_house_laundry.txt, housing_old_brewhouse_laundry.txt
+
+```
+The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning. 
+
+Source: housing_aldridge_hall_laundry.txt
+```
+
+### What's the best time to do laundry in Aldridge Hall? — run 3
+
+- Best distance: 0.1226 (passed the gate)
+- Sources retrieved: housing_aldridge_hall_laundry.txt, housing_calder_annexe_laundry.txt, housing_innisfree_hall_laundry.txt, housing_morrow_house_laundry.txt, housing_old_brewhouse_laundry.txt
+
+```
+The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning. 
+
+Source: housing_aldridge_hall_laundry.txt
+```
