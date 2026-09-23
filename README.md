@@ -541,23 +541,73 @@ not a judgment call about whether the target was fair.
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
+I missed nothing — all five criteria held on every run, including the two
+near-miss cases I stress-tested past the aggregate numbers in Verdicts
+(criterion 1's CS 210 sibling pair, criterion 4's Tamsin Court chunk). Neither
+came close to failing: the CS 210 answer chunk ranked 2nd and 3rd of 5, not
+5th, and the Tamsin Court chunk had no boundary damage at all, just a
+topic-mixing problem the criterion wasn't built to catch. Clearing every
+criterion on a 5-question test set against a corpus this well-behaved isn't
+evidence the system is excellent — it's evidence the targets had room in
+them. Here's where, specifically, and what I'd tighten:
 
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
+**1. Criterion 4 (chunks read as complete thoughts) — the clearest case.**
+The literal bar — "nothing cut mid-word or mid-clause" — only checks for
+boundary damage at the **chunking** stage. It has nothing to say about
+whether a chunk is topically coherent, so it let a real problem straight
+through: `housing_tamsin_court.txt#3` reads as two unrelated facts (laundry
+machines, then noise levels) glued into one chunk. The mechanism isn't a
+chunker bug — `chunker.py::split_documents` faithfully reproduced one
+paragraph of the source document, and that paragraph itself mixes two facts
+with no `\n\n` between them (confirmed by reading
+`corpora/campus_life/documents/housing_tamsin_court.txt` directly). A
+chunker that produced this exact chunk from garbled input would still pass
+my criterion, which means the criterion isn't actually testing what
+`split_documents`'s docstring claims the strategy achieves ("splitting on
+paragraph breaks pulls [separable facts] apart into chunks that each answer
+one question"). Tighter version: *"For at least 4 of 5 sampled chunks, the
+chunk covers exactly one fact or sub-topic — I can state what it's about in
+one clause, with no second, unrelated clause mixed in."* That's a test of
+topical cohesion, not just string integrity, and it's the one my current
+sample would have actually failed on (4/5, not 5/5 — still clearing the
+target, but for the first time by the intended margin instead of trivially).
 
-     The five stages: loading → chunking → embedding → retrieval → generation.
+**2. Criterion 1 (retrieved chunk contains the answer) — margin, not
+presence.** `criteria.md` predicted the CS 210 question as the place
+sibling-document confusion at the **retrieval** stage might push the real
+answer out of the results, because `course_cs_340_exams.txt` (a different
+course, same sentence shape) out-scores it on raw distance. It does — that
+sibling chunk ranks #1 — but the answer-bearing chunk still lands at #2 and
+#3 out of the 5 retrieved, well inside `TOP_K`. The current criterion asks
+only "is it anywhere in the top 5," which this corpus's one hard case
+clears with two spots to spare — the criterion never gets close enough to
+the failure mode it was written to catch. Tighter version: *"the retrieved
+top **three** chunks include one that contains the answer, for at least 4
+of 5 questions"* — same question set and count, but a narrower net that
+would have actually put the CS 210 case's margin on the line instead of
+letting `TOP_K=5` absorb it.
 
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
+**The pattern underneath both.** Both near-misses I found — sibling
+*documents* competing on phrasing (CS 210 vs. CS 340) and sibling *facts*
+crammed into one paragraph (Tamsin Court's laundry-and-noise chunk) — trace
+back to the same property of `campus_life`: near-duplicate content, either
+across files or within one file's own paragraphs. That's exactly what I
+flagged as the risk in `criteria.md` before I had any results, for criteria
+1, 4, and 5 alike. The system handled every instance of it I could find in
+this test round, but the fact that my two tightened criteria above are both
+instances of it, and not something unrelated, tells me it's the one place
+worth watching if I add more test questions later — not three separate
+problems, but one property of the corpus showing up in two different
+stages.
 
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
-
-     Milestone 3. -->
+**Why I'm not tightening criteria 2, 3, or 5.** Criterion 2 held at an exact
+5/5 across all 15 answers with no near-misses to stress-test. Criterion 3
+held with a 0.19 margin on its closest out-of-scope question — not a number
+that was narrowly avoided. Criterion 5 held cleanly on the one
+sibling-document pair (CS 210/CS 340) it was explicitly designed to stress,
+and the wrong document was never cited once across 15 answers. Nothing in
+this round gives me a specific reason to believe those three are hiding a
+failure mode the way 1 and 4 are.
 
 ## The Improvement
 
