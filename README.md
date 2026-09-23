@@ -383,27 +383,147 @@ anything it's a lateral move with a worse worst-case.
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
-
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+- Produced by: `run_eval.py::main` (criteria 1, 2), `run_eval.py::check_out_of_scope`
+  (criterion 3), and a manual sample via `app.py chunks -n 20` (criterion 4) —
+  all four checked against the actual corpus text on disk for criterion 5.
+- Primary evidence file: `results/run_2026-09-22_1302_before.md` — the exact
+  `python run_eval.py --label before` invocation. Two additional, unlabeled
+  re-runs the same week (`results/run_2026-09-24_0131.md`,
+  `results/run_2026-09-24_0146.md`) are also committed; they land on the same
+  sources and distances every time and are consistent with the primary file,
+  which is what you'd expect since retrieval is deterministic and only the
+  generated wording moves between runs.
+- Corpus: `campus_life` · top-k 5 · relevance cutoff 0.6 · 3 runs per question,
+  caching off.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks read as complete thoughts, not fragments | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. The cited source is the one that actually contains the fact | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+Criteria 3 and 4 don't vary run to run — the gate is a deterministic distance
+comparison and chunking doesn't depend on the model, so the same number is
+correct in all three columns rather than three independent measurements.
+
+### Criterion 1 — evidence, the corpus's hardest case
+
+From `results/run_2026-09-22_1302_before.md`, retrieval by `store.py::search`
+over chunks from `chunker.py::split_documents`. `criteria.md` flagged this
+question in advance as the one most likely to retrieve a sibling document
+instead of the real answer:
+
+```
+### Is the CS 210 final exam curved? — run 1
+
+- Best distance: 0.4409 (passed the gate)
+- Sources retrieved: course_cs_210.txt, course_cs_210_exams.txt, course_cs_340.txt, course_cs_340_exams.txt
+```
+
+Even with `course_cs_340.txt` / `course_cs_340_exams.txt` (a different course,
+same sentence shape) also pulled into the top-5, both `course_cs_210.txt` and
+`course_cs_210_exams.txt` were retrieved, and both contain the answer
+verbatim: *"Midterms are curved, the final is not."* Checked against every
+other question's retrieved-sources list in the same file, the answering
+document is present in all 5 cases across all 3 runs.
+
+### Criterion 2 — evidence
+
+From the same file, produced by `generate.py::answer_from_chunks`:
+
+```
+### How much printing quota does each student get per semester? — run 2
+
+Each student gets $30 of printing per semester. (Source: admin_printing_quota.txt)
+```
+
+Every one of the 15 answers across the 3 runs (5 questions × 3 runs) names at
+least one source, in every case the correct one — worded differently each
+time (parenthetical, "Source:" line, occasionally both a primary and a
+secondary source), but never absent.
+
+### Criterion 3 — evidence
+
+Produced by `run_eval.py::check_out_of_scope`, `gate.py::check`, cutoff 0.6:
+
+```
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.787 | refused |
+| How do I change the oil in a diesel engine? | 0.923 | refused |
+| Who won the 1994 World Cup? | 0.847 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.849 | refused |
+| How do I write a for loop in Rust? | 0.860 | refused |
+```
+
+All five out-of-scope distances (0.787–0.923) clear the 0.6 cutoff with room
+to spare — none within 0.18 of the line.
+
+### Criterion 4 — evidence
+
+Produced by `chunker.py::split_documents`, sampled with `python app.py chunks
+-n 20` (chunking is deterministic, so a fresh sample today matches what
+Milestone 3 indexed):
+
+```
+Chunk  |  source: admin_add_drop_deadline.txt#0
+On the add/drop deadline
+
+You can add a course through the end of the second week. Dropping is a longer window — through the end of week six — but a drop after week two shows as a W on your transcript. Nothing anywhere on the registrar's site says this plainly, and students find out from each other.
+
+Chunk  |  source: course_biol_160.txt#0
+BIOL 160 Cell Biology
+
+I lived here my sophomore year. Format is lecture three times a week with a weekly lab. Assessment: four unit tests and a cumulative final. Not curved.
+
+Chunk  |  source: dining_halden_hall.txt#0
+Halden Hall
+
+I lived here my sophomore year. Wait times: rarely more than 8 minutes, even at noon. The thing worth going for is soup rotation, and the bread is baked on site. The thing to know is that closes at 7:00pm, which catches people out.
+
+Chunk  |  source: housing_aldridge_hall_noise.txt#0
+Noise levels in Aldridge Hall
+
+Asked about this a lot so writing it down. Quiet floors on 3 and 4 are genuinely enforced.
+
+Chunk  |  source: housing_tamsin_court.txt#3
+Tamsin Court — what it's actually like
+
+Laundry costs in-unit washer-dryer. On noise: quiet, structurally — concrete floors between units.
+```
+
+The first four are unambiguous passes. The fifth is the honest borderline
+case: nothing is cut mid-word or mid-clause, so it passes the criterion as
+written, but it reads as two facts (laundry, noise) glued together rather
+than one clean thought. Checking the source file explains why — the
+document itself packs both into a single paragraph with no `\n\n` between
+them, so `split_documents` is faithfully reproducing one already-mixed
+paragraph, not merging two clean ones. It's a real soft spot in the corpus
+that the chunker can't fix on its own, not a chunking bug.
+
+### Criterion 5 — evidence
+
+Checked each cited source against the actual corpus file on disk:
+
+```
+admin_printing_quota.txt: "Every student gets $30 of printing per semester..."
+→ cited answer: "Each student gets $30 of printing per semester (admin_printing_quota.txt)."
+
+housing_aldridge_hall_laundry.txt: "Best time to do laundry here is Tuesday or Wednesday morning."
+→ cited answer: "The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning. Source: housing_aldridge_hall_laundry.txt"
+
+course_cs_210_exams.txt: "Midterms are curved, the final is not."
+→ cited answer: "No, the CS 210 final exam is not curved. Source: course_cs_210_exams.txt (and course_cs_210.txt)"
+```
+
+All 5 questions, across all 3 runs, cite a document that actually contains
+the fact asked about — never a sibling document that's merely on-topic. The
+CS 210 case is the one criterion 5 was written to stress (`criteria.md` calls
+out this exact sibling pair), and it holds: both files named actually contain
+the curve fact, unlike the `course_cs_340*` siblings that were retrieved but
+never cited.
 
 ## Verdicts
 
