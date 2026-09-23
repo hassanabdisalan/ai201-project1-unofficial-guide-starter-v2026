@@ -527,22 +527,17 @@ never cited.
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     week — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
+No criteria were revised — all five were measurable exactly as written in
+`criteria.md`, and the run log's numbers are what decided each verdict below,
+not a judgment call about whether the target was fair.
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunks contain the answer | MET | 5/5 in all three runs, against a 4/5 target — but I didn't stop at "the right document's name showed up in the sources list." Chunking splits multi-paragraph documents, so I re-ran `app.py retrieve` directly on the one question `criteria.md` flagged as the corpus's hardest case (CS 210 vs. its CS 340 lookalike) and confirmed the specific chunk containing "Midterms are curved, the final is not" ranked #2 and #3 of 5 — not just some other paragraph from the same file riding along on the document's name. Did the same spot-check for the shuttle and laundry questions: in both, the answer-bearing chunk is literally the #1 result. |
+| 2 | Every answer names a source | MET | Exact match to the 5/5 target, not just a majority: all 15 answers (5 questions × 3 runs) name at least one source, and in every case it's the correct one. The wording varies (parenthetical, a "Source:" line, sometimes a primary plus a secondary source), but the source line itself never goes missing. |
+| 3 | Gate stops out-of-corpus questions | MET | 5/5 refused against a 4/5 target, and not a near thing — the closest out-of-scope distance (0.787, "capital of Mongolia") still sits 0.19 above the 0.6 cutoff, well clear of the boundary. |
+| 4 | Chunks read as complete thoughts, not fragments | MET | 5/5 of a fresh 5-chunk sample start and end on complete sentences, against a 4/5 target. One sample (`housing_tamsin_court.txt#3`) reads as two facts — laundry, then noise — glued into one chunk, but nothing is cut mid-word or mid-clause, so it satisfies the criterion as I wrote it. I checked the source file: that document itself packs both facts into a single paragraph with no `\n\n` break, so the chunker is faithfully reproducing one already-mixed paragraph, not failing to split a clean one. I'm calling this MET rather than treating it as a miss, but I don't think it's a coincidence-free 5/5 either — see "What I'd Do Differently" below. |
+| 5 | The cited source is the one that actually contains the fact | MET | Checked all 15 citations against the actual corpus text on disk (not just against the retrieved-sources list) — every one names a document I confirmed contains the specific fact asked about, including the CS 210 pair this criterion was written to stress, where the system never once cited the CS 340 sibling that also got retrieved. |
 
 ## Diagnoses
 
