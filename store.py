@@ -18,6 +18,7 @@ rest of the project if they were wrong:
 """
 
 import os
+import re
 import shutil
 from dataclasses import dataclass
 
@@ -28,6 +29,7 @@ from dataclasses import dataclass
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 
 import chromadb  # noqa: E402
+from rank_bm25 import BM25Okapi  # noqa: E402
 
 import config
 from chunker import Chunk
@@ -192,6 +194,21 @@ def build_index(
     return len(chunks)
 
 
+def _tokenize(text: str) -> list[str]:
+    """Lowercase, alphanumeric-only tokens — enough for BM25 to match exact
+    words and numbers ("210", "340") that two near-duplicate chunks share
+    everything else with."""
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+# Standard reciprocal-rank-fusion constant. It's not sensitive: the point of
+# RRF is combining two RANKINGS, not two scores on different scales (cosine
+# distance and a BM25 score aren't comparable numbers), so the exact constant
+# barely moves the result — it only softens how much a #1-vs-#2 gap matters
+# relative to a #10-vs-#11 gap.
+_RRF_K = 60
+
+
 def search(
     question: str,
     top_k: int | None = None,
@@ -200,14 +217,36 @@ def search(
     category: str | None = None,
 ) -> list[Result]:
     """
-    Retrieve the chunks closest in meaning to a question.
+    Retrieve the chunks most relevant to a question — semantic similarity
+    blended with BM25 keyword matching (Milestone 4's hybrid-search
+    improvement).
 
-    Returns them nearest-first, each with its distance.
+    Semantic-only retrieval on this corpus has one known weak spot: sibling
+    documents that share almost every word ("CS 210 Data Structures —
+    assessment" vs. "CS 340 Databases — assessment") land at nearly the same
+    distance, and the wrong one can win on raw cosine distance alone. BM25
+    doesn't care about phrasing similarity — it cares whether the exact
+    tokens in the question ("210") appear in the chunk — so it pulls the
+    right sibling back up. The two signals are combined by reciprocal rank
+    fusion: each chunk's semantic rank and its BM25 rank both contribute,
+    so a chunk has to be a genuinely poor semantic match AND have no keyword
+    overlap to fall out of the results entirely.
+
+    The corpus is small enough (183 chunks) that both signals are computed
+    over the *entire* (optionally category-filtered) collection on every
+    call, rather than maintaining a separate persistent BM25 index — simpler,
+    and nothing to keep in sync after a re-index.
+
+    Returns the fused top-k, nearest-first by semantic distance is no longer
+    guaranteed — fused order is. Each `Result.distance` is still the true
+    semantic cosine distance for that chunk, unchanged, because the
+    relevance gate's 0.6 cutoff is calibrated against that number and has to
+    keep meaning the same thing.
 
     `category` (stretch: metadata filtering) narrows the search to chunks
-    from one filename prefix — e.g. "housing" — before distances are even
-    computed, using Chroma's `where` clause. Chunks outside that category
-    are invisible to this query, not merely ranked lower.
+    from one filename prefix — e.g. "housing" — before either signal is
+    computed, using Chroma's `where` clause. Chunks outside that category are
+    invisible to this query, not merely ranked lower.
     """
     top_k = top_k or config.TOP_K
     name = config.collection_name(corpus, variant)
@@ -220,23 +259,50 @@ def search(
         ) from exc
 
     where = {"category": category} if category else None
+    total = collection.count()
+    if total == 0:
+        return []
 
+    # Pull the whole (filtered) collection, not just top-k by distance — BM25
+    # needs to see every candidate to have a fair shot at surfacing one that
+    # semantic search ranked outside the naive top-k.
     raw = collection.query(
         query_embeddings=embed([question]),
-        n_results=min(top_k, collection.count()),
+        n_results=total,
         where=where,
     )
 
+    docs = raw["documents"][0]
+    metas = raw["metadatas"][0]
+    distances = raw["distances"][0]
+    if not docs:
+        return []
+
+    bm25 = BM25Okapi([_tokenize(d) for d in docs])
+    bm25_scores = bm25.get_scores(_tokenize(question))
+
+    # Chroma already returns `docs` sorted nearest-first, so its index order
+    # doubles as the semantic ranking.
+    semantic_rank = {i: i for i in range(len(docs))}
+    bm25_rank = {
+        i: rank
+        for rank, i in enumerate(sorted(range(len(docs)), key=lambda i: -bm25_scores[i]))
+    }
+
+    fused = sorted(
+        range(len(docs)),
+        key=lambda i: -(1 / (_RRF_K + semantic_rank[i]) + 1 / (_RRF_K + bm25_rank[i])),
+    )
+
     results: list[Result] = []
-    for text, meta, distance in zip(
-        raw["documents"][0], raw["metadatas"][0], raw["distances"][0]
-    ):
+    for i in fused[:top_k]:
+        meta = metas[i]
         results.append(
             Result(
-                text=text,
+                text=docs[i],
                 source=str(meta.get("source", "unknown")),
                 label=f"{meta.get('source', 'unknown')}#{meta.get('index', 0)}",
-                distance=float(distance),
+                distance=float(distances[i]),
                 produced_by=str(meta.get("produced_by", "unknown")),
                 category=str(meta.get("category", "unknown")),
             )

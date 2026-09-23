@@ -611,34 +611,110 @@ failure mode the way 1 and 4 are.
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** `store.py::search` now blends BM25 keyword scoring with
+the existing semantic (cosine-distance) search, combined by reciprocal rank
+fusion (RRF), instead of ranking purely on embedding distance. Because the
+corpus is small (183 chunks), both signals are computed over the entire
+(optionally category-filtered) collection on every query — no separate
+persistent BM25 index to keep in sync after a re-index. Each `Result`'s
+`distance` field is still the unmodified semantic cosine distance, so the
+relevance gate's 0.6 cutoff keeps meaning exactly what it meant before;
+only which chunks make the top-k, and in what order, changed.
 
-**Why I picked it:**
-
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+**Why I picked it:** Milestone 3's diagnosis named a specific mechanism, not
+just a symptom: for "Is the CS 210 final exam curved?", `course_cs_340_exams.txt`
+(a different course, near-identical sentence shape) outranks the real answer
+document on raw semantic distance, because the two documents' assessment
+paragraphs are almost the same prose and differ mainly in one exact
+token — the course number. That's the textbook case for hybrid search: a
+semantic embedding is rewarded for phrasing similarity and can't tell "210"
+from "340" apart on meaning, but BM25 rewards the literal token match on
+whichever number the question actually asked about.
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Produced the same way as Before: `python run_eval.py --label after`, 3 runs
+per question, caching off, same corpus/top-k/threshold. Full transcript:
+`results/run_2026-09-24_0233_after.md`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks read as complete thoughts, not fragments | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. The cited source is the one that actually contains the fact | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+Real output, `store.py::search` (retrieval) → `generate.py::answer_from_chunks`
+(generation), from `results/run_2026-09-24_0233_after.md`:
+
+```
+### Is the CS 210 final exam curved? — run 1
+
+- Best distance: 0.4409 (passed the gate)
+- Sources retrieved: course_cs_210.txt, course_cs_210_exams.txt, course_cs_340.txt, course_cs_340_exams.txt
+
+No, the CS 210 final exam is not curved (source: `course_cs_210_exams.txt` and `course_cs_210.txt`).
+```
+
+```
+### What is the capital of Mongolia? (out-of-scope)
+
+Best distance: 0.826 — refused
+```
 
 **Did it help?**
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+Yes, on the exact mechanism the diagnosis named — but my own five criteria are
+too loose to show it, which is precisely the slack Milestone 3 flagged.
 
-     Milestone 4. -->
+Side by side, the Before and After criterion tables are identical: 5/5 on
+every criterion, every run, both times. Taken at face value, that reads as
+"no effect." It isn't — it's that none of my original targets were tight
+enough to see this specific fix, the same gap I named in Milestone 3 when I
+proposed tightening criterion 1 from "top 5" to "top 3." I checked that
+tightened version too: it *still* wouldn't have shown a difference, because
+even before the fix, `course_cs_210.txt` (which also contains "Midterms are
+curved, the final is not") already ranked #2 of 5. Top 3 wasn't tight enough
+either. The version that actually isolates the mechanism is stricter still —
+**is the #1-ranked chunk one that contains the answer** — and checking that
+directly with `app.py retrieve` shows the real change:
+
+| Question | #1 chunk, before | #1 chunk, after |
+|---|---|---|
+| Printing quota | `admin_printing_quota.txt` (correct) | `admin_printing_quota.txt` (correct) |
+| Shuttle schedule | `transit_shuttle.txt` (correct) | `transit_shuttle.txt` (correct) |
+| Meal plan change window | `admin_meal_plan_changes.txt` (correct) | `admin_meal_plan_changes.txt` (correct) |
+| CS 210 exam curve | `course_cs_340_exams.txt` (**wrong course**) | `course_cs_210_exams.txt` (correct) |
+| Aldridge laundry time | `housing_aldridge_hall_laundry.txt` (correct) | `housing_aldridge_hall_laundry.txt` (correct) |
+
+Before the change, the #1 slot for the CS 210 question was the wrong
+document — the model still answered correctly because the real answer was
+lower in its context window, not because retrieval got it right. After the
+change, the correct document leads, and `course_cs_340_exams.txt` drops to
+#3. Nothing else in that table moved: hybrid search didn't touch the four
+questions that were already unambiguous, and it didn't break anything that
+was working.
+
+**A real cost, not just a win.** Checking the full retrieved sets (not just
+#1), hybrid search also pulled less-relevant documents into ranks 2–5 for
+some easy questions purely on generic word overlap — e.g. the printing
+quota question now retrieves `admin_wifi_and_accounts.txt` and
+`study_group_rooms.txt` in place of documents that were at least on-topic
+before. It didn't cost anything measurable here (the model still answered
+correctly and cited the right source every time), but it's a real trade,
+not a free win: BM25 rewards *any* shared token, including generic ones like
+"student" or "per," not just the meaningful ones like "210."
+
+**No regression on the gate.** All 5 out-of-scope questions are still
+refused, though three of their reported best-distances shifted (e.g.
+"capital of Mongolia" moved from 0.787 to 0.826) — an honest side effect of
+the gate now checking the minimum distance within the *fused* top-5 rather
+than the single closest chunk in the whole collection. In every case the
+shift left them further from the 0.6 cutoff, not closer, so no refusal
+flipped, but it's worth naming: hybrid search makes the reported "best
+distance" a slightly less pure measurement of "how semantically close is
+the nearest thing in the corpus" than it was before.
 
 ## What's Still Broken
 
