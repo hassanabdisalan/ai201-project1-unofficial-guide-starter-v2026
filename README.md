@@ -1233,6 +1233,31 @@ between the two sets. Before = `results/capstone/trial<N>.*`; after =
   criterion 3 is MET in one set and MISSED in the other, depending on when the API
   was queried. I did not re-run to get a better draw.
 
+**Evidence, after the change (trial 1 of the second set)** — same log writer
+(`serve.py::log_request`, called from `serve.py::ask`), counts now from
+`generate.py::thread_usage`. Raw files: `results/capstone/trial1_after.jsonl` and
+`trial1_after.json`.
+
+*Criterion 3 — the timed requests that missed (over 10 000 ms, or not a 200). Each
+made exactly one model call, so the time is inside that call:*
+
+```json
+{"question": "When can I change my meal plan tier?", "status": 200, "refused": false, "latency_ms": 10775, "model_calls": 1, "prompt_tokens": 378, "output_tokens": 40, "error": null}
+{"question": "Is the CS 210 final exam curved?", "status": 500, "refused": null, "latency_ms": 2348, "model_calls": 1, "prompt_tokens": 0, "output_tokens": 0, "error": "ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high de..."}
+{"question": "Is the CS 210 final exam curved?", "status": 200, "refused": false, "latency_ms": 10047, "model_calls": 1, "prompt_tokens": 425, "output_tokens": 46, "error": null}
+```
+
+*Criterion 4 — every line with more than one logged model call in that trial.
+Tokens are one prompt's worth, so these are retried attempts, not another
+request's calls (the diagnostic that reproduced this is described above):*
+
+```json
+{"question": "How much printing quota does each student get per semester?", "status": 200, "refused": false, "latency_ms": 3207, "model_calls": 2, "prompt_tokens": 427, "output_tokens": 36}
+{"question": "What's the best time to do laundry in Aldridge Hall?", "status": 200, "refused": false, "latency_ms": 5188, "model_calls": 3, "prompt_tokens": 346, "output_tokens": 31}
+{"question": "Is the CS 210 final exam curved?", "status": 200, "refused": false, "latency_ms": 9393, "model_calls": 4, "prompt_tokens": 425, "output_tokens": 44}
+{"question": "When can I change my meal plan tier?", "status": 200, "refused": false, "latency_ms": 16628, "model_calls": 4, "prompt_tokens": 378, "output_tokens": 40}
+```
+
 **What It Costs (finished)**
 
 *Measured:* an answered request uses **about 402 prompt + 33 output tokens (435
