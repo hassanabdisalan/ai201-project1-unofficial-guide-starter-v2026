@@ -33,7 +33,7 @@ def start(port, key=None):
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(60):
         try:
-            urllib.request.urlopen(f"http://localhost:{port}/health", timeout=2).read()
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2).read()
             return p
         except Exception:
             time.sleep(1)
@@ -42,7 +42,7 @@ def start(port, key=None):
 
 def ask(port, body, timeout=120):
     data = json.dumps(body).encode()
-    req = urllib.request.Request(f"http://localhost:{port}/ask", data, {"Content-Type": "application/json"})
+    req = urllib.request.Request(f"http://127.0.0.1:{port}/ask", data, {"Content-Type": "application/json"})
     t0 = time.perf_counter()
     try:
         r = urllib.request.urlopen(req, timeout=timeout)

@@ -1,0 +1,242 @@
+{
+ "trial": 1,
+ "c3": {
+  "pass": 0,
+  "of": 10,
+  "detail": [
+   {
+    "client_ms": 10085,
+    "logged_ms": 8027,
+    "status": 200
+   },
+   {
+    "client_ms": 9953,
+    "logged_ms": 7931,
+    "status": 200
+   },
+   {
+    "client_ms": 11866,
+    "logged_ms": 9814,
+    "status": 200
+   },
+   {
+    "client_ms": 8861,
+    "logged_ms": 6834,
+    "status": 200
+   },
+   {
+    "client_ms": 9378,
+    "logged_ms": 7322,
+    "status": 200
+   },
+   {
+    "client_ms": 10660,
+    "logged_ms": 8627,
+    "status": 200
+   },
+   {
+    "client_ms": 14574,
+    "logged_ms": 12559,
+    "status": 200
+   },
+   {
+    "client_ms": 9861,
+    "logged_ms": 7818,
+    "status": 200
+   },
+   {
+    "client_ms": 9156,
+    "logged_ms": 7002,
+    "status": 200
+   },
+   {
+    "client_ms": 10704,
+    "logged_ms": 8671,
+    "status": 200
+   }
+  ]
+ },
+ "c1": {
+  "lines_added": 20,
+  "complete_lines": 20,
+  "of": 20,
+  "pass": 20
+ },
+ "c4": {
+  "lines_added": 20,
+  "correct": 4,
+  "of": 20,
+  "pass": 4,
+  "wrong": [
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 414,
+    "output_tokens": 19
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 841,
+    "output_tokens": 38
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 5,
+    "prompt_tokens": 1219,
+    "output_tokens": 72
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 724,
+    "output_tokens": 65
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 1149,
+    "output_tokens": 108
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 1198,
+    "output_tokens": 110
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 378,
+    "output_tokens": 40
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 803,
+    "output_tokens": 86
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 2069,
+    "output_tokens": 186
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 1185,
+    "output_tokens": 97
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 773,
+    "output_tokens": 49
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 1187,
+    "output_tokens": 71
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 1219,
+    "output_tokens": 79
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 803,
+    "output_tokens": 79
+   },
+   {
+    "question": "What is the recommended dosage of ibuprofen for a headache?",
+    "status": 200,
+    "refused": true,
+    "model_calls": 0,
+    "prompt_tokens": 425,
+    "output_tokens": 41
+   },
+   {
+    "question": "How do I write a for loop in Rust?",
+    "status": 200,
+    "refused": true,
+    "model_calls": 0,
+    "prompt_tokens": 346,
+    "output_tokens": 31
+   }
+  ]
+ },
+ "c5": {
+  "pass": 5,
+  "of": 5
+ },
+ "c2": {
+  "pass": 5,
+  "of": 5,
+  "detail": [
+   {
+    "status": 500,
+    "ms": 3862,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 2812,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 2813,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 3141,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 3041,
+    "exc": null,
+    "logged_status": 500
+   }
+  ],
+  "lines_added": 5
+ }
+}
