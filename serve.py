@@ -20,20 +20,44 @@ Why this exists: `app.py` runs once and exits, which is fine on your laptop
 and impossible to deploy. A hosted service has to stay up and wait for
 requests. This is the smallest thing that does that.
 
-⚠️ There is deliberately no logging, no timing and no metrics in this file.
-Week 9 has you build the structured log yourself — the request line, the
-timing field everyone skips, the whole instrument-before-you-deploy exercise.
-Shipping a logger here would hand you the answer to that. Add yours in week 9;
-this file stays the bare shell until then.
+Capstone instrumentation: every POST /ask appends one JSON line to
+`logs/requests.jsonl` (override the path with AI201_LOG_PATH). Fields:
+ts, request_id, question, answer, refused, best_distance, n_sources, status,
+latency_ms, model_calls, prompt_tokens, output_tokens, error. Token and call
+counts are per-request deltas of generate.py's session counters, so run one
+worker process (gunicorn -w 1) or they will be wrong.
 """
 
+import json
 import os
+import threading
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 
 from flask import Flask, jsonify, request
 
 import config
 
 app = Flask(__name__)
+
+LOG_PATH = Path(os.getenv("AI201_LOG_PATH", config.ROOT / "logs" / "requests.jsonl"))
+_log_lock = threading.Lock()
+
+
+def log_request(**fields) -> None:
+    """Append one structured record. Logging never breaks a request."""
+    record = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds")}
+    record.update(fields)
+    try:
+        with _log_lock:
+            LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with LOG_PATH.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "
+")
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @app.get("/health")
@@ -73,10 +97,15 @@ def ask():
     """
     from app import ask_pipeline
 
+    import generate
+
+    request_id = uuid.uuid4().hex[:8]
     payload = request.get_json(silent=True) or {}
     question = (payload.get("question") or "").strip()
 
     if not question:
+        log_request(request_id=request_id, question="", answer=None, status=400,
+                    latency_ms=0, error="empty question")
         return (
             jsonify(
                 {
@@ -87,10 +116,38 @@ def ask():
             400,
         )
 
+    calls0, tok0 = generate.call_count(), generate.token_counts()
+    t0 = time.perf_counter()
+
+    def usage_since():
+        tok = generate.token_counts()
+        return {
+            "model_calls": generate.call_count() - calls0,
+            "prompt_tokens": tok["prompt"] - tok0["prompt"],
+            "output_tokens": tok["output"] - tok0["output"],
+        }
+
     try:
         outcome = ask_pipeline(question, corpus=config.CORPUS)
     except Exception as exc:  # noqa: BLE001 — a reader gets this, not a traceback
-        return jsonify({"error": f"{type(exc).__name__}: {exc}"}), 500
+        err = f"{type(exc).__name__}: {exc}"
+        log_request(request_id=request_id, question=question, answer=None,
+                    status=500, latency_ms=round((time.perf_counter() - t0) * 1000),
+                    error=err, **usage_since())
+        return jsonify({"error": err}), 500
+
+    log_request(
+        request_id=request_id,
+        question=question,
+        answer=outcome["answer"],
+        refused=outcome["refused"],
+        best_distance=round(outcome["best_distance"], 4),
+        n_sources=len(outcome["sources"]),
+        status=200,
+        latency_ms=round((time.perf_counter() - t0) * 1000),
+        error=None,
+        **usage_since(),
+    )
 
     return jsonify(
         {
