@@ -50,6 +50,12 @@ def log_request(**fields) -> None:
     """Append one structured record. Logging never breaks a request."""
     record = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds")}
     record.update(fields)
+    # Also to stdout: on a host the file below is wiped when the instance
+    # sleeps, but the platform keeps stdout in its log viewer.
+    try:
+        print("REQLOG " + json.dumps(record, ensure_ascii=False), flush=True)
+    except Exception:  # noqa: BLE001
+        pass
     try:
         with _log_lock:
             LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
