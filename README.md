@@ -977,7 +977,7 @@ Gemini response, and a `RUNNING.md` section with the start command and
 environment. Estimated well under ninety minutes.
 
 
-**Run Record (extract)**
+**Instrumentation**
 
 First 10 of 20 entries from `logs/requests.jsonl` (full file committed). (An earlier test run, not committed, showed a 20 s first request on a cold server; this run was already warm.)
 
@@ -993,3 +993,44 @@ First 10 of 20 entries from `logs/requests.jsonl` (full file committed). (An ear
 {"ts": "2026-11-12T16:56:59.954+00:00", "request_id": "353eccc7", "question": "What is the recommended dosage of ibuprofen for a headache?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.8487, "n_sources": 0, "status": 200, "latency_ms": 371, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
 {"ts": "2026-11-12T16:57:02.581+00:00", "request_id": "ad8a3c8f", "question": "How do I write a for loop in Rust?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.8598, "n_sources": 0, "status": 200, "latency_ms": 593, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
 ```
+
+Failed runs, from a second server started with `GEMINI_API_KEY=bad-key` (log
+written to a separate file so the committed run record stays clean). The
+first is a model-call failure that reaches the user as HTTP 500 and is still
+logged: `model_calls` is 1 because the call was attempted, tokens are 0
+because none were billed. The second is a rejected empty input (HTTP 400).
+
+```json
+{"ts": "2026-11-12T18:35:19.494+00:00", "request_id": "9459691d", "question": "Is the CS 210 final exam curved?", "answer": null, "status": 500, "latency_ms": 11315, "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}", "model_calls": 1, "prompt_tokens": 0, "output_tokens": 0}
+{"ts": "2026-11-12T18:35:19.976+00:00", "request_id": "17bdd79d", "question": "", "answer": null, "status": 400, "latency_ms": 0, "error": "empty question"}
+```
+
+**Tested from a clean checkout.** I cloned the repo into a new folder, built a
+fresh venv, and followed `RUNNING.md`. It ran, but the Capstone section as
+first written would have failed a reader in three places: it never said to
+create the venv or `.env`, never said the key goes in `.env`, and `chroma_db/`
+is gitignored so `/health` would say `index_ready: false` until
+`python app.py index` runs. I rewrote `RUNNING.md` to cover all three. The
+clone's first request took 13.2 s (cold start).
+
+**What It Costs**
+
+Measured from the 10 answered requests in `logs/requests.jsonl` (5 test
+questions x 2 passes, cache off so every one reached the model; token counts
+are read from Gemini's `usage_metadata`, not estimated):
+
+| | mean | median | min | max |
+|---|---|---|---|---|
+| prompt tokens | 398 | 414 | 346 | 427 |
+| output tokens | 33 | 33 | 19 | 47 |
+| latency (ms) | 5,537 | 4,114 | 1,397 | 12,303 |
+
+- **One answered request is about 431 tokens (398 in + 33 out) and about 5.5 s.**
+- **A refused request costs 0 tokens and about 0.5 s** (mean of 10: 528 ms): the
+  gate refuses before any model call.
+- I did **not** convert tokens to dollars: I haven't verified published pricing
+  for `gemini-3.5-flash-lite`, and on the free tier actual spend is $0. Tokens
+  and seconds are what I measured.
+- Latency spread (1.4 s to 12.3 s for near-identical prompts) is dominated by
+  the hosted model call, not retrieval: refusals, which skip it, finish in
+  under 1 s.
