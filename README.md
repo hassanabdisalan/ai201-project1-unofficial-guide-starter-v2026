@@ -925,3 +925,53 @@ narrower than Milestone 4's: not a different retrieval outcome, but a
 gate whose calibration (Week 1's 0.6, measured against pure cosine
 distance) means what it originally meant again, independent of whatever
 `search()` does internally.
+
+
+---
+
+## Capstone
+
+**The System**
+
+The Unofficial Guide over the `campus_life` corpus — the same retrieval pipeline
+as Weeks 1–2 (paragraph chunks, hybrid BM25 + semantic search, the relevance
+gate decoupled from fusion, Gemini for the grounded answer), unchanged. This
+unit extends it; it does not touch how it answers.
+
+**The Shape**
+
+Shape **A — deploy and instrument**, on **Path B (local with logs)**. The
+pipeline already has an HTTP wrapper (`serve.py`: `POST /ask`, `GET /health`)
+that was shipped deliberately bare — no logging, no timing, no metrics. What I'm
+adding is the operational layer around it: one structured log record per
+request (timestamp, question in, answer out, whether the gate refused, number of
+chunks retrieved, end-to-end latency, and the token counts the model call
+reports), a single documented command that starts the service under gunicorn,
+and a cost-per-request number worked out from those logged token counts rather
+than from the pricing page. I'm on Path B because the system carries a local
+embedding model (ONNX MiniLM, ~80 MB, plus an optional sentence-transformers
+variant), and the point of this path is that someone who isn't me can reproduce
+the run from a clean checkout with one command and a committed log.
+
+When I'm finished I'll claim: *every request to the service leaves a record I
+can query after the fact, and I can say from that record how long a request
+takes and what it costs.*
+
+**Out of Scope**
+
+- **No changes to retrieval, chunking, the gate, or the prompt.** I'm not adding
+  a third retrieval strategy or re-tuning the threshold. If a criterion exposes a
+  retrieval problem, I'll diagnose and fix it as the one improvement — but I'm
+  not going looking for one.
+- **No hosting signup.** No Path A: no platform account, no URL, no card. A
+  deployed version is a stretch item at most, not part of the plan.
+- **No new interface and no new endpoints** beyond what `serve.py` has. I may
+  add a log-reading helper script, but the service's API doesn't change.
+- **No per-stage latency breakdown, load testing, or metrics dashboard.** One
+  end-to-end latency field is the plan; a stage breakdown and a 10× load run are
+  declared stretch items, to be written down before I start them.
+
+**Size check.** The build is one piece of work with three small parts that all
+serve it: a logging wrapper in `serve.py`, capturing token usage from the
+Gemini response, and a `RUNNING.md` section with the start command and
+environment. Estimated well under ninety minutes.
