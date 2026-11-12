@@ -1335,3 +1335,12 @@ a reproduction showed rate-limit retries as a second cause.
 
 I supplied the API key myself; it is in the git-ignored `.env` and was never
 committed.
+
+
+**Stretch: Both Run Paths (declared before building)**
+
+I'm adding Path A alongside the Path B local run: deploy to Render's free tier
+via `render.yaml` and document what differed (setup time, cold-start latency,
+memory, log persistence). It is declared here before the deploy exists; the
+outcome, including a failure to fit in 512 MB if that happens, will be reported
+under this label.

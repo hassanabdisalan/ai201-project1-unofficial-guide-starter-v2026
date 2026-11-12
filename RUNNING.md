@@ -303,3 +303,26 @@ prompt_tokens, output_tokens`.
 `requirements.txt`, embedding model = Chroma's bundled ONNX all-MiniLM-L6-v2
 (~80 MB, downloaded on first run), generation model `gemini-3.5-flash-lite`
 via the Gemini API.
+
+
+---
+
+## Capstone: hosted on Render (Path A)
+
+Config is `render.yaml` (a Render Blueprint). Steps:
+
+1. Push the repo to GitHub.
+2. Render dashboard → **New → Blueprint** → pick this repo. It reads `render.yaml`.
+3. When asked, set `GEMINI_API_KEY` (not committed). Everything else is in the file.
+4. Build runs `pip install -r requirements.txt && python app.py index` (the
+   vector index is gitignored, so it must be built on the host); start runs
+   `gunicorn serve:app --workers 1 --threads 4 --timeout 120`.
+5. Check `https://<service>.onrender.com/health` shows `"index_ready": true`, then POST to `/ask`.
+
+**Things that differ from the local run:** the free instance sleeps after ~15 min
+and takes about a minute to wake (first request is slow); `logs/requests.jsonl`
+is wiped on sleep, so each record is also printed to stdout as `REQLOG {...}`
+(Render dashboard → Logs) and the entries that count are copied into the README;
+512 MB RAM is the tightest constraint for the local embedding model.
+
+**URL / platform / result:** *(fill in after deploying)*

@@ -1,0 +1,21 @@
+# Render Blueprint for The Unofficial Guide (Capstone, Path A / stretch).
+# Free plan = 512 MB RAM: the ONNX embedding model + Chroma should fit, but if
+# the service is OOM-killed (see Render logs), that is a finding to report.
+services:
+  - type: web
+    name: unofficial-guide
+    runtime: python
+    plan: free
+    # The vector index is gitignored, so it is built during the build step.
+    buildCommand: pip install -r requirements.txt && python app.py index
+    # One worker, 4 threads: usage counters are per thread (generate.py), and
+    # --timeout 120 because a slow Gemini call can take 40 s (default is 30 s).
+    startCommand: gunicorn serve:app --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: AI201_CACHE
+        value: "0"
+      - key: GEMINI_API_KEY
+        sync: false   # paste it in the Render dashboard; never commit it
