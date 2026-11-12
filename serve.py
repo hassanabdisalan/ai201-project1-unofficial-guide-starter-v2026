@@ -24,8 +24,8 @@ Capstone instrumentation: every POST /ask appends one JSON line to
 `logs/requests.jsonl` (override the path with AI201_LOG_PATH). Fields:
 ts, request_id, question, answer, refused, best_distance, n_sources, status,
 latency_ms, model_calls, prompt_tokens, output_tokens, error. Token and call
-counts are per-request deltas of generate.py's session counters, so run one
-worker process (gunicorn -w 1) or they will be wrong.
+counts are per-request deltas of generate.py's per-thread counters, so
+concurrent requests are attributed correctly.
 """
 
 import json
@@ -115,15 +115,15 @@ def ask():
             400,
         )
 
-    calls0, tok0 = generate.call_count(), generate.token_counts()
+    use0 = generate.thread_usage()
     t0 = time.perf_counter()
 
     def usage_since():
-        tok = generate.token_counts()
+        use = generate.thread_usage()
         return {
-            "model_calls": generate.call_count() - calls0,
-            "prompt_tokens": tok["prompt"] - tok0["prompt"],
-            "output_tokens": tok["output"] - tok0["output"],
+            "model_calls": use["calls"] - use0["calls"],
+            "prompt_tokens": use["prompt"] - use0["prompt"],
+            "output_tokens": use["output"] - use0["output"],
         }
 
     try:

@@ -31,6 +31,7 @@ import hashlib
 import json
 import os
 import sys
+import threading
 import time
 
 import config
@@ -42,6 +43,7 @@ _session_output_tokens = 0
 _cache_hits = 0
 _client = None
 _budget_warned = False
+_thread = threading.local()  # per-thread usage, for per-request accounting
 
 
 class QuotaGuard(Exception):
@@ -139,8 +141,12 @@ def _record_tokens(response) -> None:
         meta = getattr(response, "usage_metadata", None)
         if meta is None:
             return
-        _session_prompt_tokens += int(getattr(meta, "prompt_token_count", 0) or 0)
-        _session_output_tokens += int(getattr(meta, "candidates_token_count", 0) or 0)
+        p = int(getattr(meta, "prompt_token_count", 0) or 0)
+        o = int(getattr(meta, "candidates_token_count", 0) or 0)
+        _session_prompt_tokens += p
+        _session_output_tokens += o
+        _thread.prompt = getattr(_thread, "prompt", 0) + p
+        _thread.output = getattr(_thread, "output", 0) + o
     except Exception:
         pass  # accounting never breaks the thing it is accounting for
 
@@ -159,6 +165,20 @@ def usage() -> str:
         f"{tokens}"
         f"{f', {_cache_hits} served from cache' if _cache_hits else ''}"
     )
+
+
+def thread_usage() -> dict[str, int]:
+    """Calls and tokens made by the CURRENT thread only.
+
+    The session counters above are process-wide, so subtracting two snapshots
+    of them mixes in other threads' calls whenever requests overlap. A web
+    request runs entirely in one thread, so this is per-request usage.
+    """
+    return {
+        "calls": getattr(_thread, "calls", 0),
+        "prompt": getattr(_thread, "prompt", 0),
+        "output": getattr(_thread, "output", 0),
+    }
 
 
 def call_count() -> int:
@@ -232,6 +252,7 @@ def generate(prompt: str, system: str | None = None, cache: bool = True) -> str:
             client = _get_client()
             _call_times.append(time.monotonic())
             _session_calls += 1
+            _thread.calls = getattr(_thread, "calls", 0) + 1
 
             kwargs = {"model": config.MODEL, "contents": prompt}
             if system:

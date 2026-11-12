@@ -16,7 +16,8 @@ import questions as Q
 TRIAL = int(sys.argv[1])
 OUT = ROOT / "results" / "capstone"
 OUT.mkdir(parents=True, exist_ok=True)
-LOG = OUT / f"trial{TRIAL}.jsonl"
+TAG = os.getenv("CAPSTONE_TAG", "")
+LOG = OUT / f"trial{TRIAL}{TAG}.jsonl"
 if LOG.exists():
     LOG.unlink()
 GOOD, BAD = 5071, 5072
@@ -161,5 +162,5 @@ finally:
     for p in (good, bad):
         p.terminate()
 
-(OUT / f"trial{TRIAL}.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+(OUT / f"trial{TRIAL}{TAG}.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
 print(json.dumps({k: (v if not isinstance(v, dict) else {a: b for a, b in v.items() if a not in ("detail", "wrong")}) for k, v in res.items()}))
