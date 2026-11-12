@@ -979,7 +979,7 @@ environment. Estimated well under ninety minutes.
 
 **Run Record (extract)**
 
-First 10 of 20 entries from `logs/requests.jsonl` (full file committed). One request in the full log of 20 is a cold start; note the first entry's latency.
+First 10 of 20 entries from `logs/requests.jsonl` (full file committed). (An earlier test run, not committed, showed a 20 s first request on a cold server; this run was already warm.)
 
 ```json
 {"ts": "2026-11-12T16:56:11.567+00:00", "request_id": "f38bc47b", "question": "How much printing quota does each student get per semester?", "answer": "Each student gets $30 of printing per semester, which is about 600 black-and-white pages (admin_printing_quota.txt).", "refused": false, "best_distance": 0.3077, "n_sources": 5, "status": 200, "latency_ms": 1691, "error": null, "model_calls": 1, "prompt_tokens": 427, "output_tokens": 33}
