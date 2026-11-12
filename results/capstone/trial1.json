@@ -1,0 +1,210 @@
+{
+ "trial": 1,
+ "c3": {
+  "pass": 10,
+  "of": 10,
+  "detail": [
+   {
+    "client_ms": 3124,
+    "logged_ms": 3116,
+    "status": 200
+   },
+   {
+    "client_ms": 2050,
+    "logged_ms": 2029,
+    "status": 200
+   },
+   {
+    "client_ms": 7838,
+    "logged_ms": 7819,
+    "status": 200
+   },
+   {
+    "client_ms": 1387,
+    "logged_ms": 1383,
+    "status": 200
+   },
+   {
+    "client_ms": 1283,
+    "logged_ms": 1276,
+    "status": 200
+   },
+   {
+    "client_ms": 1306,
+    "logged_ms": 1288,
+    "status": 200
+   },
+   {
+    "client_ms": 1573,
+    "logged_ms": 1472,
+    "status": 200
+   },
+   {
+    "client_ms": 1367,
+    "logged_ms": 1362,
+    "status": 200
+   },
+   {
+    "client_ms": 2407,
+    "logged_ms": 2385,
+    "status": 200
+   },
+   {
+    "client_ms": 1341,
+    "logged_ms": 1328,
+    "status": 200
+   }
+  ]
+ },
+ "c1": {
+  "lines_added": 20,
+  "complete_lines": 20,
+  "of": 20,
+  "pass": 20
+ },
+ "c4": {
+  "lines_added": 20,
+  "correct": 8,
+  "of": 20,
+  "pass": 8,
+  "wrong": [
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 378,
+    "output_tokens": 34
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 805,
+    "output_tokens": 56
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 852,
+    "output_tokens": 65
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 771,
+    "output_tokens": 74
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 7,
+    "prompt_tokens": 1990,
+    "output_tokens": 152
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 1187,
+    "output_tokens": 75
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 1255,
+    "output_tokens": 66
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 427,
+    "output_tokens": 33
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 1198,
+    "output_tokens": 108
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 1563,
+    "output_tokens": 133
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 8,
+    "prompt_tokens": 3634,
+    "output_tokens": 290
+   },
+   {
+    "question": "How do I change the oil in a diesel engine?",
+    "status": 200,
+    "refused": true,
+    "model_calls": 0,
+    "prompt_tokens": 378,
+    "output_tokens": 36
+   }
+  ]
+ },
+ "c5": {
+  "pass": 5,
+  "of": 5
+ },
+ "c2": {
+  "pass": 5,
+  "of": 5,
+  "detail": [
+   {
+    "status": 500,
+    "ms": 2330,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 1409,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 803,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 916,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 1242,
+    "exc": null,
+    "logged_status": 500
+   }
+  ],
+  "lines_added": 5
+ }
+}

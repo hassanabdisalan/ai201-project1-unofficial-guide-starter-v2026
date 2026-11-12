@@ -1034,3 +1034,79 @@ are read from Gemini's `usage_metadata`, not estimated):
 - Latency spread (1.4 s to 12.3 s for near-identical prompts) is dominated by
   the hosted model call, not retrieval: refusals, which skip it, finish in
   under 1 s.
+
+
+**Capstone Run Log**
+
+Run with `python tools/capstone_test.py <N>` (file: `tools/capstone_test.py`), three
+separate trials, each starting fresh servers, a fresh log, cache off. Raw output for
+every trial is in `results/capstone/trial<N>.jsonl` (the service's own log) and
+`trial<N>.json` (the harness's per-criterion detail). Criteria and targets are in
+`criteria.md`, committed in `328d4fa` before any results.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Every request leaves a complete log record | 20 of 20 lines | 20/20 | 20/20 | 20/20 | MET |
+| 2. Failed model call: readable 500, under 30 s, logged | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Answered requests under 10 s | 9 of 10 | 10/10 | 9/10 | 10/10 | MET |
+| 4. Tokens / model calls attributed to the right request under 3 concurrent clients | 20 of 20 lines | 8/20 | 9/20 | 11/20 | MISSED |
+| 5. Gate still refuses out-of-scope, 0 model calls | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+**A harness bug, disclosed.** My very first trial 1 scored criterion 3 at 0/10
+(criterion 4 scored 4/20 there too, and missed in the re-runs as well; its count
+varies with how the threads happen to overlap). The cause was my test client, not the service:
+on this Windows machine requests to `localhost` take ~2 s to resolve vs ~40 ms for
+`127.0.0.1` (measured: 2344 / 2058 ms vs 38 / 37 ms on `/health`), which put every
+client-measured latency ~2 s above the logged one and tripped criterion 3's
+250 ms cross-check. I switched the client to `127.0.0.1`, kept the original output
+as `results/capstone/trial1_localhost_harness_bug.*`, and re-ran all three trials.
+Only the client address changed; no criterion or target was touched. The table
+above is the re-run.
+
+**Evidence, from trial 3 unless noted** (log lines written by `serve.py::log_request`,
+called from `serve.py::ask`; answers/errors truncated with …):
+
+*Criterion 1 — all 20 lines present, with the required keys (harness count: `lines_added: 20, complete_lines: 20`). The three request types that don't produce an ordinary answer:*
+
+```json
+{"ts": "2026-11-12T18:59:54.158+00:00", "request_id": "5ae2bfba", "question": "What is the capital of Mongolia?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.7873, "n_sources": 0, "status": 200, "latency_ms": 315, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+{"ts": "2026-11-12T18:59:54.930+00:00", "request_id": "62d119a8", "question": "", "answer": null, "status": 400, "latency_ms": 0, "error": "empty question"}
+{"ts": "2026-11-12T19:00:00.472+00:00", "request_id": "4093f3bb", "question": "How much printing quota does each student get per semester?", "answer": null, "status": 500, "latency_ms": 5514, "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. …", "model_calls": 1, "prompt_tokens": 0, "output_tokens": 0}
+```
+
+*Criterion 2 — client view of the five bad-key requests (harness, trial 3 `c2.detail`):*
+
+```
+{"status": 500, "ms": 637, "exc": null, "logged_status": 500}
+{"status": 500, "ms": 500, "exc": null, "logged_status": 500}
+{"status": 500, "ms": 344, "exc": null, "logged_status": 500}
+{"status": 500, "ms": 360, "exc": null, "logged_status": 500}
+{"status": 500, "ms": 597, "exc": null, "logged_status": 500}
+```
+
+*Criterion 3 — (client ms, logged ms) per request, all three trials:*
+
+```
+trial 1: [(3124, 3116), (2050, 2029), (7838, 7819), (1387, 1383), (1283, 1276), (1306, 1288), (1573, 1472), (1367, 1362), (2407, 2385), (1341, 1328)]
+trial 2: [(1068, 1063), (8880, 8858), (8766, 8747), (8827, 8816), (1373, 1351), (8810, 8793), (6019, 6015), (25655, 25649), (8283, 8254), (1984, 1775)]
+trial 3: [(7599, 7595), (6401, 6375), (1184, 1179), (4959, 4954), (7000, 6974), (4583, 4572), (3619, 3615), (4071, 4066), (5791, 5786), (4973, 4948)]
+```
+
+Trial 2 had one request at 25 655 ms (a slow model call, the 1 in 10 the target
+allows); the logged time matches the client's, so the log is honest about it.
+
+*Criterion 4 — log lines from the concurrent phase where the counts are wrong.
+Each of these is ONE answered request, yet it logs `model_calls` of 2 or more:*
+
+```json
+{"question": "When can I change my meal plan tier?", "status": 200, "refused": false, "latency_ms": 2944, "model_calls": 3, "prompt_tokens": 378, "output_tokens": 31}
+{"question": "How often does the campus shuttle run on weekdays?", "status": 200, "refused": false, "latency_ms": 3019, "model_calls": 3, "prompt_tokens": 792, "output_tokens": 52}
+{"question": "How much printing quota does each student get per semester?", "status": 200, "refused": false, "latency_ms": 3438, "model_calls": 5, "prompt_tokens": 1219, "output_tokens": 88}
+```
+
+*Criterion 5 — refused questions (trial 3):*
+
+```json
+{"question": "What is the capital of Mongolia?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.7873, "n_sources": 0, "status": 200, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+{"question": "How do I change the oil in a diesel engine?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.9228, "n_sources": 0, "status": 200, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+```

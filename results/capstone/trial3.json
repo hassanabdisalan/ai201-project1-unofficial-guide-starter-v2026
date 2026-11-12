@@ -1,0 +1,186 @@
+{
+ "trial": 3,
+ "c3": {
+  "pass": 10,
+  "of": 10,
+  "detail": [
+   {
+    "client_ms": 7599,
+    "logged_ms": 7595,
+    "status": 200
+   },
+   {
+    "client_ms": 6401,
+    "logged_ms": 6375,
+    "status": 200
+   },
+   {
+    "client_ms": 1184,
+    "logged_ms": 1179,
+    "status": 200
+   },
+   {
+    "client_ms": 4959,
+    "logged_ms": 4954,
+    "status": 200
+   },
+   {
+    "client_ms": 7000,
+    "logged_ms": 6974,
+    "status": 200
+   },
+   {
+    "client_ms": 4583,
+    "logged_ms": 4572,
+    "status": 200
+   },
+   {
+    "client_ms": 3619,
+    "logged_ms": 3615,
+    "status": 200
+   },
+   {
+    "client_ms": 4071,
+    "logged_ms": 4066,
+    "status": 200
+   },
+   {
+    "client_ms": 5791,
+    "logged_ms": 5786,
+    "status": 200
+   },
+   {
+    "client_ms": 4973,
+    "logged_ms": 4948,
+    "status": 200
+   }
+  ]
+ },
+ "c1": {
+  "lines_added": 20,
+  "complete_lines": 20,
+  "of": 20,
+  "pass": 20
+ },
+ "c4": {
+  "lines_added": 20,
+  "correct": 11,
+  "of": 20,
+  "pass": 11,
+  "wrong": [
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 378,
+    "output_tokens": 31
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 792,
+    "output_tokens": 52
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 5,
+    "prompt_tokens": 1219,
+    "output_tokens": 88
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 9,
+    "prompt_tokens": 3683,
+    "output_tokens": 297
+   },
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 839,
+    "output_tokens": 69
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 792,
+    "output_tokens": 63
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 803,
+    "output_tokens": 81
+   },
+   {
+    "question": "How do I change the oil in a diesel engine?",
+    "status": 200,
+    "refused": true,
+    "model_calls": 0,
+    "prompt_tokens": 346,
+    "output_tokens": 31
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 500,
+    "refused": null,
+    "model_calls": 12,
+    "prompt_tokens": 4832,
+    "output_tokens": 413
+   }
+  ]
+ },
+ "c5": {
+  "pass": 5,
+  "of": 5
+ },
+ "c2": {
+  "pass": 5,
+  "of": 5,
+  "detail": [
+   {
+    "status": 500,
+    "ms": 637,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 500,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 344,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 360,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 597,
+    "exc": null,
+    "logged_status": 500
+   }
+  ],
+  "lines_added": 5
+ }
+}
