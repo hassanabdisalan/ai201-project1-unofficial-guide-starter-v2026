@@ -147,3 +147,95 @@ expect to hit at least once.
      The whole reason the originals stay visible is so someone can see what you
      said before you knew the answer.
      ───────────────────────────────────────────────────────────────────────── -->
+
+
+---
+
+# Capstone criteria
+
+Written before any capstone results exist. Criteria 1–4 are about the
+extension (the structured log and run path in `serve.py`); criterion 5 is about
+the original system, to catch a regression. Drafted by Claude following the
+Criteria Self-Check procedure at my request; I reviewed and own the targets.
+
+**Test conditions for every criterion.** Server started as documented in
+`RUNNING.md` for Windows: `AI201_CACHE=0`, `python serve.py`, fresh log file
+per trial (`AI201_LOG_PATH`), index built. "Warm" means after one discarded
+request. "The in-corpus set" is the 5 `QUESTIONS` in `questions.py`; "the
+out-of-scope set" is the 5 `OUT_OF_SCOPE` questions. One trial = one full pass
+of the criterion's procedure; three trials each.
+
+## 1. Every request leaves a complete log record
+
+In a single trial, send 20 requests: 10 in-corpus (the set twice), 5
+out-of-scope, 3 empty-question, 2 whose model call fails (server started with
+an invalid API key for those two). The log file gains **exactly 20 lines, all
+valid JSON, and every line contains the keys `ts`, `request_id`, `question`,
+`answer`, `status`, `latency_ms`, `error`.** Target: 20 of 20 lines, in each
+of 3 trials.
+
+**Why this target:** a request that fails is exactly the one I'll want to
+diagnose later, and a missing line looks the same as "never happened". So the
+target is all of them, not a rate; 19 of 20 would mean some class of request is
+invisible. The mix covers every code path in `serve.py::ask` that returns.
+
+## 2. A failed model call returns a readable error and is logged
+
+With the server started with an invalid `GEMINI_API_KEY`, send each of the 5
+in-corpus questions. For each, the HTTP response is **status 500 with a JSON
+body whose `error` field is non-empty, returned in under 30 seconds**, and the
+log gains a line with `status` 500 and a non-empty `error`. Target: 5 of 5, in
+each of 3 trials.
+
+**Why this target:** the Milestone 3 spot check passed once (11 s), but there
+is no timeout in `serve.py` and `generate.py` only retries on 429, so I don't
+know the worst case. 30 s is the point where a user has given up and a proxy in
+front of it would be cutting the connection. All 5, because a failure path that
+works 4 times in 5 is one a user will eventually hit.
+
+## 3. Answered requests come back within 10 seconds
+
+Send the in-corpus set twice, one request at a time, after one discarded warm-up
+request (10 timed requests per trial). Latency is the client-measured time from
+sending the request to receiving the full response, and the same request's
+logged `latency_ms` must not be more than 250 ms below it. Target: **at least 9
+of 10 under 10 000 ms**, in each of 3 trials.
+
+**Why this target:** my Milestone 3 sample ranged 1.4 s–12.3 s (median 4.1 s,
+mean 5.5 s), with the model call dominating. 10 s is about as long as a student
+will wait on a chat-style answer; allowing 1 in 10 over reflects that the
+hosted model's time varies on near-identical prompts, which I can't fix. A
+stricter 5 s target would miss on roughly half of requests and tell me about
+Gemini, not about my service. Cold-start (first request) is excluded on
+purpose; it measured 13–20 s and is documented in `RUNNING.md`.
+
+## 4. Token and model-call counts are attributed to the right request, even under concurrency
+
+Send 15 requests (the in-corpus set three times) plus the out-of-scope set
+(5), 20 in all, from 3 concurrent clients. In the log: **every answered
+request has `model_calls` equal to 1 and both `prompt_tokens` and
+`output_tokens` greater than 0, and every refused request has `model_calls`
+0, `prompt_tokens` 0 and `output_tokens` 0.** Target: 20 of 20 lines
+correct, in each of 3 trials.
+
+**Why this target:** the cost number in the README is built from these fields,
+so a wrong attribution makes the cost number wrong without anything looking
+broken. The counts are computed in `serve.py` as differences of process-wide
+counters in `generate.py`, which is only correct when requests don't overlap;
+`python serve.py` is multithreaded, so I expect this one to be at risk and I'd
+be disappointed to ship a cost number that's silently wrong under a second
+simultaneous user. All 20 because one misattributed line already corrupts the
+sum.
+
+## 5. The extension didn't break the relevance gate
+
+Send the out-of-scope set (5 questions) once per trial. **Every response has
+`refused: true`, and its log line has `model_calls` 0.** Target: 5 of 5, in each
+of 3 trials.
+
+**Why this target:** the gate was calibrated in Week 1 and re-checked after the
+hybrid-search and gate-decoupling changes (all 5 refused, best distances
+0.787–0.923 against a 0.6 threshold). It is the one safeguard against an
+invented answer to a question the corpus can't support, so a single leak is a
+failure, not noise. It's the deliberately safe criterion: the point is to
+catch the extension regressing the original system, not to find new problems.
