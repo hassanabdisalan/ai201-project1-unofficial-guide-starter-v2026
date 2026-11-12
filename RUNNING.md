@@ -261,7 +261,17 @@ that the test actually happened, and they're part of what gets graded.
 
 ## Capstone: running the instrumented service (Path B — local with logs)
 
-**Start it** (from the repo root, venv active, `GEMINI_API_KEY` in `.env`):
+**Setup from a clean checkout** (tested in a fresh clone, see README → Instrumentation):
+
+```powershell
+git clone <repo-url> unofficial-guide; cd unofficial-guide
+python -m venv .venv; .venv\Scripts\Activate.ps1      # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env      # then add a line:  GEMINI_API_KEY=<your key>
+python app.py index         # builds chroma_db/ (not in git); ~11 s, downloads ~80 MB model first time
+```
+
+**Start it** (from the repo root, venv active):
 
 ```powershell
 # Windows (gunicorn does not run on Windows)
@@ -273,13 +283,14 @@ $env:AI201_CACHE="0"; $env:PORT="5000"; python serve.py
 AI201_CACHE=0 gunicorn -w 1 -b 0.0.0.0:5000 serve:app
 ```
 
-First time only: `python app.py index` to build the vector index (`/health`
-reports `index_ready`). Then:
+Check `curl localhost:5000/health` says `"index_ready": true`, then:
 
 ```bash
-curl -X POST localhost:5000/ask -H 'Content-Type: application/json' \
-     -d '{"question": "Is the CS 210 final exam curved?"}'
+curl -X POST localhost:5000/ask -H 'Content-Type: application/json'      -d '{"question": "Is the CS 210 final exam curved?"}'
 ```
+
+The first request after start is slow (~13-20 s: the embedding model and the
+Gemini client load lazily). Later ones take 1-12 s depending on the model.
 
 **Why `AI201_CACHE=0` and `-w 1`:** the response cache would make repeat
 questions cost zero tokens and hide real cost and latency; and token/call
