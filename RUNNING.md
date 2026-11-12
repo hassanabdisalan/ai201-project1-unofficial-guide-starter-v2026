@@ -325,4 +325,4 @@ is wiped on sleep, so each record is also printed to stdout as `REQLOG {...}`
 (Render dashboard → Logs) and the entries that count are copied into the README;
 512 MB RAM is the tightest constraint for the local embedding model.
 
-**URL / platform / result:** *(fill in after deploying)*
+**URL / platform / result:** https://unofficial-guide.onrender.com on Render (free plan, Python 3.12.8, region Oregon). Deployed 2026-11-12 from this repo's `render.yaml` settings via the Render API (service `srv-dbr1akutlv9c73eckp2g`); `/health` returned `index_ready: true`. Entries from it are in the README under "Stretch: Both Run Paths".

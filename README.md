@@ -1344,3 +1344,52 @@ via `render.yaml` and document what differed (setup time, cold-start latency,
 memory, log persistence). It is declared here before the deploy exists; the
 outcome, including a failure to fit in 512 MB if that happens, will be reported
 under this label.
+
+
+**Stretch: Both Run Paths — result**
+
+Deployed to Render (free plan) at **https://unofficial-guide.onrender.com**,
+created from the `render.yaml` settings through Render's API; build and start
+commands are in `render.yaml` and `RUNNING.md`. It built and went live in about
+2 minutes, `/health` returned `index_ready: true`, and answers matched the local run
+(same sources, same `best_distance` values, for example 0.4409 for the CS 210
+question and 0.7873 for the Mongolia question). 12 requests, copied from Render's
+log API (`REQLOG` lines printed by `serve.py::log_request`; answers truncated),
+including one rejected input:
+
+```json
+REQLOG {"ts": "2026-11-12T19:39:37.796+00:00", "request_id": "21bc5251", "question": "Is the CS 210 final exam curved?", "answer": "No, the CS 210 final exam is not curved. \n\nSources: `course_...", "refused": false, "best_distance": 0.4409, "n_sources": 4, "status": 200, "latency_ms": 27210, "error": null, "model_calls": 1, "prompt_tokens": 425, "output_tokens": 43}
+REQLOG {"ts": "2026-11-12T19:39:46.286+00:00", "request_id": "be10e98a", "question": "How much printing quota does each student get per semester?", "answer": "Every student gets $30 of printing per semester. This comes ...", "refused": false, "best_distance": 0.3077, "n_sources": 5, "status": 200, "latency_ms": 8014, "error": null, "model_calls": 1, "prompt_tokens": 427, "output_tokens": 23}
+REQLOG {"ts": "2026-11-12T19:39:55.962+00:00", "request_id": "28865ade", "question": "What is the capital of Mongolia?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.7873, "n_sources": 0, "status": 200, "latency_ms": 8580, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+REQLOG {"ts": "2026-11-12T19:40:14.587+00:00", "request_id": "2a1c0cbe", "question": "How often does the campus shuttle run on weekdays?", "answer": "The campus shuttle runs a loop every 20 minutes on weekdays....", "refused": false, "best_distance": 0.1825, "n_sources": 5, "status": 200, "latency_ms": 9688, "error": null, "model_calls": 1, "prompt_tokens": 414, "output_tokens": 24}
+REQLOG {"ts": "2026-11-12T19:40:21.911+00:00", "request_id": "bd7ccff9", "question": "When can I change my meal plan tier?", "answer": "You can change your meal plan tier once, during the first te...", "refused": false, "best_distance": 0.2161, "n_sources": 5, "status": 200, "latency_ms": 6679, "error": null, "model_calls": 1, "prompt_tokens": 378, "output_tokens": 38}
+REQLOG {"ts": "2026-11-12T19:40:31.823+00:00", "request_id": "835b0283", "question": "What's the best time to do laundry in Aldridge Hall?", "answer": "The best time to do laundry in Aldridge Hall is Tuesday or W...", "refused": false, "best_distance": 0.1226, "n_sources": 5, "status": 200, "latency_ms": 9218, "error": null, "model_calls": 1, "prompt_tokens": 346, "output_tokens": 31}
+REQLOG {"ts": "2026-11-12T19:40:40.861+00:00", "request_id": "7385857b", "question": "How do I change the oil in a diesel engine?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.9228, "n_sources": 0, "status": 200, "latency_ms": 8531, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+REQLOG {"ts": "2026-11-12T19:40:49.057+00:00", "request_id": "f84b3c59", "question": "Who won the 1994 World Cup?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.8474, "n_sources": 0, "status": 200, "latency_ms": 7500, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+REQLOG {"ts": "2026-11-12T19:40:59.730+00:00", "request_id": "a2f234cc", "question": "Is the CS 210 final exam curved?", "answer": "No, the CS 210 final exam is not curved. \n\nSource: course_cs...", "refused": false, "best_distance": 0.4409, "n_sources": 4, "status": 200, "latency_ms": 10061, "error": null, "model_calls": 1, "prompt_tokens": 425, "output_tokens": 43}
+REQLOG {"ts": "2026-11-12T19:41:08.485+00:00", "request_id": "ee716167", "question": "How much printing quota does each student get per semester?", "answer": "Each student gets $30 of printing per semester. \n\nSource: ad...", "refused": false, "best_distance": 0.3077, "n_sources": 5, "status": 200, "latency_ms": 7723, "error": null, "model_calls": 1, "prompt_tokens": 427, "output_tokens": 22}
+REQLOG {"ts": "2026-11-12T19:41:19.556+00:00", "request_id": "168248ab", "question": "How often does the campus shuttle run on weekdays?", "answer": "On weekdays, the campus shuttle runs a loop every 20 minutes...", "refused": false, "best_distance": 0.1825, "n_sources": 5, "status": 200, "latency_ms": 10448, "error": null, "model_calls": 1, "prompt_tokens": 414, "output_tokens": 22}
+REQLOG {"ts": "2026-11-12T19:41:20.230+00:00", "request_id": "d7219550", "question": "", "answer": null, "status": 400, "latency_ms": 0, "error": "empty question"}
+```
+
+**What differed from the local run (Path B):**
+
+| | Local (Windows laptop) | Render free plan |
+|---|---|---|
+| Setup | clone, venv, `pip install`, `app.py index` (minutes, by hand) | one API call; build about 2 min, automatic |
+| Refused request | about 0.5 s (mean of 10: 528 ms) | 7500-8580 ms (3 requests) |
+| Answered request, warm | 1.4-12.3 s, median 4.1 s | 6679-10448 ms, median 9218 ms (7 requests) |
+| First request after deploy | 13-20 s | 27210 ms |
+| Memory | no limit hit | no out-of-memory kill in 12 requests; I did not read the memory graph |
+| Log file | persists in `logs/` | wiped on sleep, so the stdout `REQLOG` lines are the record |
+
+The big difference is where the time goes. Locally a refusal costs about 0.5 s
+and an answer adds the Gemini call on top; on Render a *refusal*, which never
+touches the model, takes about 8 s, and an answered request is only about 1-2 s
+longer than that. So the hosted slowness is in the part that runs on the
+instance (embedding the question and the Chroma/BM25 search, on the free plan's
+small CPU share), not in the model call. I inferred that from the refused-vs-answered
+gap rather than timing stages separately, so it is a strong hint, not a measured breakdown.
+Consequence for criterion 3 ("under 10 s"): on this host, 3 of the 8
+answered requests exceeded 10 s, so it would be a miss or a coin-flip here; I did
+not re-run the full criteria suite against the hosted URL.
