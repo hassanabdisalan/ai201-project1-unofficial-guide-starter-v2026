@@ -931,12 +931,15 @@ distance) means what it originally meant again, independent of whatever
 
 ## Capstone
 
-**The System**
+**What This Extends**
 
 The Unofficial Guide over the `campus_life` corpus — the same retrieval pipeline
 as Weeks 1–2 (paragraph chunks, hybrid BM25 + semantic search, the relevance
-gate decoupled from fusion, Gemini for the grounded answer), unchanged. This
-unit extends it; it does not touch how it answers.
+gate decoupled from fusion, Gemini for the grounded answer), unchanged in how it answers. **What's new** is the operational layer around
+its HTTP wrapper `serve.py`: a structured per-request log, per-request
+token/call accounting (`generate.py::thread_usage`), a documented run path, and
+the test harness `tools/capstone_test.py`. Retrieval, chunking, the gate and the
+prompt are untouched.
 
 **The Shape**
 
@@ -976,6 +979,15 @@ serve it: a logging wrapper in `serve.py`, capturing token usage from the
 Gemini response, and a `RUNNING.md` section with the start command and
 environment. Estimated well under ninety minutes.
 
+
+**Running It**
+
+Path B: local with logs, not hosted. The exact start command, the clean-checkout
+setup steps and the environment (Python 3.11-3.13, pinned `requirements.txt`, the
+~80 MB ONNX embedding model, the Gemini API for generation) are in `RUNNING.md`
+under "Capstone: running the instrumented service". I tested those instructions
+from a fresh clone; what that turned up is under Instrumentation below. I did not
+try to host it, so there was no platform switch to report.
 
 **Instrumentation**
 
@@ -1036,7 +1048,7 @@ are read from Gemini's `usage_metadata`, not estimated):
   under 1 s.
 
 
-**Capstone Run Log**
+**Run Log and Verdicts**
 
 Run with `python tools/capstone_test.py <N>` (file: `tools/capstone_test.py`), three
 separate trials, each starting fresh servers, a fresh log, cache off. Raw output for
@@ -1112,7 +1124,7 @@ Each of these is ONE answered request, yet it logs `model_calls` of 2 or more:*
 ```
 
 
-**Capstone Verdicts**
+**Run Log and Verdicts — Verdicts**
 
 Against the targets in `criteria.md` (unchanged, no criterion revised):
 
@@ -1159,7 +1171,7 @@ a case where the model call never returns and require a 500 within 30 s. I expec
 that would miss. Criterion 3 is the one that genuinely carries risk (trial 2 had 9,
 with one request at 25.7 s).
 
-**The Improvement (declared before building)**
+**The Improvement** (declared before building)
 
 One change, aimed at criterion 4's mechanism: make the usage counters
 **per-thread** instead of per-process. `generate.py` gets a `threading.local()`
@@ -1272,19 +1284,29 @@ once. Hosting and dashboards are worth more only after the service's own numbers
 
 **How I Used AI**
 
-I used Claude Code (Sonnet 5.5) inside the repo for essentially all of the build
-and test mechanics. It wrote the structured logging in `serve.py`, the per-thread
-counters in `generate.py` and the test harness `tools/capstone_test.py`; it ran
-every trial, diagnosed the criterion 4 miss from the logs and wrote this Capstone
-README. The five criteria in `criteria.md` were **drafted by Claude**, following
-the Criteria Self-Check, at my request. The unit says not to do this, and the file
-says so at its top, so the targets are only as defensible as my review of them.
-The ordering is in the history: the criteria (`328d4fa`) before any results, the
-verdicts and diagnosis (`2f6b302`) before the improvement (`95e1607`). Two things
-it got wrong and then corrected: its first test harness measured through
-`localhost`, which on this machine adds about 2 s per request (it found this,
-disclosed it, kept the original output and re-ran every trial); and its first
-account of criterion 4's remaining misses ("concurrent threads, fixed") was
-incomplete, because a reproduction showed rate-limit retries as a second cause.
+I used Claude Code (Sonnet 5.5) inside the repo for the build and the test
+mechanics: it wrote the logging in `serve.py`, the test harness, ran every trial
+and wrote this section of the README. Two specific moments:
+
+*1. The criteria.* **What I asked:** for five acceptance criteria following the
+Criteria Self-Check, after it had twice declined to write them and asked me to
+(the unit says not to ask a model to write them). **What I got:** five criteria,
+four about the extension, with targets and reasons, committed as `328d4fa` before
+any results existed, plus a self-check and a prediction of which would fail.
+**What I changed / what it means:** the file records that Claude drafted them, so
+the targets are only as defensible as my review of them. The prediction held for
+criterion 4 (the logged counts under concurrency), which is the one it said I'd
+be "disappointed to miss".
+
+*2. The test result that was the test's fault.* **What I asked:** to run the five
+criteria three times each. **What I got:** a first trial scoring criterion 3 at
+0/10. Instead of reporting it, it measured the cause: requests to `localhost` cost
+about 2 s on this machine against about 40 ms for `127.0.0.1`. **What I changed:**
+the harness now uses `127.0.0.1`; the original output is kept as
+`results/capstone/trial1_localhost_harness_bug.*`, all trials were re-run, and
+the README discloses it. A related correction later: its first account of
+criterion 4's remaining misses ("concurrent threads, fixed") was incomplete, and
+a reproduction showed rate-limit retries as a second cause.
+
 I supplied the API key myself; it is in the git-ignored `.env` and was never
 committed.
