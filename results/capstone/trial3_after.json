@@ -1,0 +1,130 @@
+{
+ "trial": 3,
+ "c3": {
+  "pass": 9,
+  "of": 10,
+  "detail": [
+   {
+    "client_ms": 1760,
+    "logged_ms": 1755,
+    "status": 200
+   },
+   {
+    "client_ms": 1221,
+    "logged_ms": 1195,
+    "status": 200
+   },
+   {
+    "client_ms": 1399,
+    "logged_ms": 1382,
+    "status": 500
+   },
+   {
+    "client_ms": 2509,
+    "logged_ms": 2431,
+    "status": 200
+   },
+   {
+    "client_ms": 2073,
+    "logged_ms": 2056,
+    "status": 200
+   },
+   {
+    "client_ms": 1545,
+    "logged_ms": 1528,
+    "status": 200
+   },
+   {
+    "client_ms": 2439,
+    "logged_ms": 2364,
+    "status": 200
+   },
+   {
+    "client_ms": 9748,
+    "logged_ms": 9728,
+    "status": 200
+   },
+   {
+    "client_ms": 1790,
+    "logged_ms": 1785,
+    "status": 200
+   },
+   {
+    "client_ms": 2179,
+    "logged_ms": 2172,
+    "status": 200
+   }
+  ]
+ },
+ "c1": {
+  "lines_added": 20,
+  "complete_lines": 20,
+  "of": 20,
+  "pass": 20
+ },
+ "c4": {
+  "lines_added": 20,
+  "correct": 18,
+  "of": 20,
+  "pass": 18,
+  "wrong": [
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 427,
+    "output_tokens": 19
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 378,
+    "output_tokens": 36
+   }
+  ]
+ },
+ "c5": {
+  "pass": 5,
+  "of": 5
+ },
+ "c2": {
+  "pass": 5,
+  "of": 5,
+  "detail": [
+   {
+    "status": 500,
+    "ms": 1058,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 1410,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 1351,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 806,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 904,
+    "exc": null,
+    "logged_status": 500
+   }
+  ],
+  "lines_added": 5
+ }
+}

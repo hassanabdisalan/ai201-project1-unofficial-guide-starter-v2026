@@ -1172,3 +1172,119 @@ to 20/20 in all three trials and criteria 1, 2, 3 and 5 not to move. The risk I'
 watching is that the fix quietly breaks the single-request numbers, so I'll compare
 sequential token counts before and after, too. Out of scope: switching to gunicorn
 or multiple processes, and any change to retrieval or the model call.
+
+
+**Improvement Results — Before and After**
+
+Same harness (`tools/capstone_test.py`), same five criteria, three trials each, nothing else changed
+between the two sets. Before = `results/capstone/trial<N>.*`; after =
+`results/capstone/trial<N>_after.*` (code change in commit `95e1607`).
+
+| Criterion | Target | Before (1 / 2 / 3) | After (1 / 2 / 3) | Verdict before → after |
+|---|---|---|---|---|
+| 1. Complete log record per request | 20/20 | 20 / 20 / 20 | 20 / 20 / 20 | MET → MET |
+| 2. Failed call: readable 500 under 30 s, logged | 5/5 | 5 / 5 / 5 | 5 / 5 / 5 | MET → MET |
+| 3. Answered requests under 10 s | 9/10 | 10 / 9 / 10 | 7 / 6 / 9 | MET → **MISSED** |
+| 4. Counts attributed correctly, 3 concurrent clients | 20/20 | 8 / 9 / 11 | 16 / 15 / 18 | MISSED → **MISSED** |
+| 5. Gate refuses out-of-scope, 0 model calls | 5/5 | 5 / 5 / 5 | 5 / 5 / 5 | MET → MET |
+
+**Did it help?** Partly, and it exposed something I hadn't diagnosed.
+
+- *Criterion 4 — the targeted mechanism is fixed, the criterion is still missed.*
+  Wrong lines went from 12, 11, 9 per trial to 4, 5, 2. The cross-request
+  contamination is gone: before, one refused request per trial logged calls and
+  tokens it never made, and answered requests logged 7, 8, 10, 14 calls; after,
+  no refused request is wrong and none of the remaining wrong lines has more than 4
+  calls. (I also confirmed the sequential numbers didn't move: mean 402 prompt /
+  33 output tokens over 30 sequential answered requests after, vs 398 / 33 before.)
+- *What's left is a second, different cause.* Every remaining wrong line is a
+  status-200 answered request with `model_calls` of 2 to 4 and one prompt's worth
+  of tokens. I reproduced it on a fresh server (40 requests, 3 concurrent clients):
+  38 lines with `model_calls` 1 and 2 lines with 4, the latter at 43.9 s and
+  34.8 s latency, with `[rate limit] service pushed back. Retrying...` in the
+  server's stderr. `generate.py::generate` retries 429s up to 4 times and counts
+  every *attempt* in the call counter, so a request that was retried legitimately
+  reports 4 calls. That is the log telling the truth about attempts, while my
+  criterion said "model_calls equals 1", so it measures a real effect (the service
+  hit the rate limit under concurrency) that the criterion was not written to
+  separate from misattribution. The criterion stays as written and stays MISSED;
+  I'm not lowering a number I missed.
+- *Criterion 3 got worse, and it isn't the fix.* This phase is sequential and
+  doesn't touch the changed code. Slow requests have `model_calls` of 1 in both
+  sets, so the time is inside the single Gemini call, which is bimodal (about
+  1-2 s or 8-14 s). The after-run also logged `ServerError: 503 UNAVAILABLE ...
+  high demand` responses from Gemini inside the timed phase (trials 1 and 3, one
+  request each, which count as failures for this criterion). The before-run's
+  trial 2 already showed the same slow cluster (8 s, five times; one at 25 s). I
+  read this as the hosted model being slower and flakier at the time of the second
+  run, but I can't prove that from these logs. The honest summary is that
+  criterion 3 is MET in one set and MISSED in the other, depending on when the API
+  was queried. I did not re-run to get a better draw.
+
+**What It Costs (finished)**
+
+*Measured:* an answered request uses **about 402 prompt + 33 output tokens (435
+total)** and 1.2-14 s of wall time (mean of 30 sequential answered requests in the
+after-trials; the earlier 10-request measurement gave 398 + 33). A refused request
+makes no model call: 0 tokens, about 0.5 s. Token counts are read from Gemini's
+`usage_metadata` by `generate.py::_record_tokens` and logged per request by
+`serve.py::log_request`, with the response cache off.
+
+*100 people a day:* assume each person asks 5 questions a day and every one is
+answered (a worst case, since refused questions are free): 100 x 5 = 500
+requests/day; 500 x 402 = 201,000 prompt tokens and 500 x 33 = 16,500 output
+tokens, about **217,500 tokens/day (~6.5 million/month)**. In compute time,
+500 x ~5.5 s is about 46 minutes of model wait per day, which one worker handles
+easily. I have not converted that to dollars because I haven't verified published
+pricing for `gemini-3.5-flash-lite`; the arithmetic is tokens x the current
+per-million-token prices, and on the free tier I'm using the spend is $0. The
+constraint I actually observed is rate, not cost: three concurrent clients were
+enough to trigger 429 retries.
+
+**What's Still Broken**
+
+1. **Criterion 4 (MISSED, 16 / 15 / 18 of 20).** The counts are now per-request,
+   but they conflate attempts with requests: a request retried after a 429 logs
+   `model_calls` 2-4. What I'd do: split the field into `model_calls` (successful)
+   and `model_retries` (rate-limit retries), then re-test with the criterion
+   reworded to say which one it means. I stopped because the unit allowed one
+   improvement, and this change touches the retry loop in `generate.py`.
+2. **Criterion 3 (MISSED in the after-set, 7 / 6 / 9).** The slowness is inside
+   the hosted model's single call plus occasional 503s, which this service
+   doesn't control. What I'd do: add a timeout and one retry on 503 in
+   `generate.py` and report cold/slow requests separately. I stopped because I
+   can't fix Gemini's latency from this repo, and a retry would change the cost
+   number.
+3. **No timeout on the model call.** Nothing tested a call that *hangs*;
+   criterion 2 only covers a fast failure (an invalid key). That is the target I
+   set too easily: I'd add a hung-call case requiring a 500 in under 30 s, and
+   expect to miss it.
+4. **A Gemini 503 reaches the user as a bare 500.** Fine as a failure path, but a
+   user can't tell "try again" from "broken".
+5. **Cut, not built:** hosted deployment (Path A), a stage-level latency
+   breakdown, a 10x load run. All were out of scope from Milestone 1.
+
+**If I Had Another Unit**
+
+First, the retry and timeout work in `generate.py` (items 1-3): it is the one place that explains the remaining
+criterion 4 miss, the 25-44 s outliers and the untested hang, so fixing it moves verdicts and the latency story at
+once. Hosting and dashboards are worth more only after the service's own numbers can be trusted.
+
+**How I Used AI**
+
+I used Claude Code (Sonnet 5.5) inside the repo for essentially all of the build
+and test mechanics. It wrote the structured logging in `serve.py`, the per-thread
+counters in `generate.py` and the test harness `tools/capstone_test.py`; it ran
+every trial, diagnosed the criterion 4 miss from the logs and wrote this Capstone
+README. The five criteria in `criteria.md` were **drafted by Claude**, following
+the Criteria Self-Check, at my request. The unit says not to do this, and the file
+says so at its top, so the targets are only as defensible as my review of them.
+The ordering is in the history: the criteria (`328d4fa`) before any results, the
+verdicts and diagnosis (`2f6b302`) before the improvement (`95e1607`). Two things
+it got wrong and then corrected: its first test harness measured through
+`localhost`, which on this machine adds about 2 s per request (it found this,
+disclosed it, kept the original output and re-ran every trial); and its first
+account of criterion 4's remaining misses ("concurrent threads, fixed") was
+incomplete, because a reproduction showed rate-limit retries as a second cause.
+I supplied the API key myself; it is in the git-ignored `.env` and was never
+committed.

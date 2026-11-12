@@ -292,10 +292,7 @@ curl -X POST localhost:5000/ask -H 'Content-Type: application/json'      -d '{"q
 The first request after start is slow (~13-20 s: the embedding model and the
 Gemini client load lazily). Later ones take 1-12 s depending on the model.
 
-**Why `AI201_CACHE=0` and `-w 1`:** the response cache would make repeat
-questions cost zero tokens and hide real cost and latency; and token/call
-counts in the log are per-request differences of one process's counters, so
-more than one worker would make them wrong.
+**Why `AI201_CACHE=0`:** the response cache would make repeat questions cost zero tokens and hide real cost and latency. Per-request token and call counts are tracked per thread (commit `95e1607`), so concurrent requests no longer need `-w 1` for the log to be right; it stays in the gunicorn command because the rate limiter in generate.py is also per process. Note `model_calls` counts attempts, including 429 retries.
 
 **The log:** every `POST /ask` appends a JSON line to `logs/requests.jsonl`
 (change with `AI201_LOG_PATH`). Fields: `ts, request_id, question, answer,

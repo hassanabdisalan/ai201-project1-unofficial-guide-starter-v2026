@@ -1,0 +1,154 @@
+{
+ "trial": 2,
+ "c3": {
+  "pass": 6,
+  "of": 10,
+  "detail": [
+   {
+    "client_ms": 13904,
+    "logged_ms": 13900,
+    "status": 200
+   },
+   {
+    "client_ms": 7532,
+    "logged_ms": 7526,
+    "status": 200
+   },
+   {
+    "client_ms": 1320,
+    "logged_ms": 1294,
+    "status": 200
+   },
+   {
+    "client_ms": 14806,
+    "logged_ms": 14800,
+    "status": 200
+   },
+   {
+    "client_ms": 1008,
+    "logged_ms": 1004,
+    "status": 200
+   },
+   {
+    "client_ms": 4844,
+    "logged_ms": 4830,
+    "status": 200
+   },
+   {
+    "client_ms": 1706,
+    "logged_ms": 1663,
+    "status": 200
+   },
+   {
+    "client_ms": 1556,
+    "logged_ms": 1551,
+    "status": 200
+   },
+   {
+    "client_ms": 10392,
+    "logged_ms": 10306,
+    "status": 200
+   },
+   {
+    "client_ms": 10415,
+    "logged_ms": 10408,
+    "status": 200
+   }
+  ]
+ },
+ "c1": {
+  "lines_added": 20,
+  "complete_lines": 20,
+  "of": 20,
+  "pass": 20
+ },
+ "c4": {
+  "lines_added": 20,
+  "correct": 15,
+  "of": 20,
+  "pass": 15,
+  "wrong": [
+   {
+    "question": "How often does the campus shuttle run on weekdays?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 414,
+    "output_tokens": 21
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 378,
+    "output_tokens": 40
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 425,
+    "output_tokens": 41
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 346,
+    "output_tokens": 31
+   },
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 427,
+    "output_tokens": 19
+   }
+  ]
+ },
+ "c5": {
+  "pass": 5,
+  "of": 5
+ },
+ "c2": {
+  "pass": 5,
+  "of": 5,
+  "detail": [
+   {
+    "status": 500,
+    "ms": 955,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 619,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 551,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 575,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 596,
+    "exc": null,
+    "logged_status": 500
+   }
+  ],
+  "lines_added": 5
+ }
+}

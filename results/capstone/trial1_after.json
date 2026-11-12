@@ -1,0 +1,146 @@
+{
+ "trial": 1,
+ "c3": {
+  "pass": 7,
+  "of": 10,
+  "detail": [
+   {
+    "client_ms": 1341,
+    "logged_ms": 1317,
+    "status": 200
+   },
+   {
+    "client_ms": 1791,
+    "logged_ms": 1780,
+    "status": 200
+   },
+   {
+    "client_ms": 10792,
+    "logged_ms": 10775,
+    "status": 200
+   },
+   {
+    "client_ms": 2361,
+    "logged_ms": 2348,
+    "status": 500
+   },
+   {
+    "client_ms": 1529,
+    "logged_ms": 1508,
+    "status": 200
+   },
+   {
+    "client_ms": 2400,
+    "logged_ms": 2383,
+    "status": 200
+   },
+   {
+    "client_ms": 1942,
+    "logged_ms": 1915,
+    "status": 200
+   },
+   {
+    "client_ms": 2295,
+    "logged_ms": 2271,
+    "status": 200
+   },
+   {
+    "client_ms": 10065,
+    "logged_ms": 10047,
+    "status": 200
+   },
+   {
+    "client_ms": 1355,
+    "logged_ms": 1342,
+    "status": 200
+   }
+  ]
+ },
+ "c1": {
+  "lines_added": 20,
+  "complete_lines": 20,
+  "of": 20,
+  "pass": 20
+ },
+ "c4": {
+  "lines_added": 20,
+  "correct": 16,
+  "of": 20,
+  "pass": 16,
+  "wrong": [
+   {
+    "question": "How much printing quota does each student get per semester?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 2,
+    "prompt_tokens": 427,
+    "output_tokens": 36
+   },
+   {
+    "question": "What's the best time to do laundry in Aldridge Hall?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 3,
+    "prompt_tokens": 346,
+    "output_tokens": 31
+   },
+   {
+    "question": "Is the CS 210 final exam curved?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 425,
+    "output_tokens": 44
+   },
+   {
+    "question": "When can I change my meal plan tier?",
+    "status": 200,
+    "refused": false,
+    "model_calls": 4,
+    "prompt_tokens": 378,
+    "output_tokens": 40
+   }
+  ]
+ },
+ "c5": {
+  "pass": 5,
+  "of": 5
+ },
+ "c2": {
+  "pass": 5,
+  "of": 5,
+  "detail": [
+   {
+    "status": 500,
+    "ms": 1105,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 1246,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 791,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 743,
+    "exc": null,
+    "logged_status": 500
+   },
+   {
+    "status": 500,
+    "ms": 810,
+    "exc": null,
+    "logged_status": 500
+   }
+  ],
+  "lines_added": 5
+ }
+}
