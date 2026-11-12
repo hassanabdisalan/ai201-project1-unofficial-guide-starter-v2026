@@ -975,3 +975,21 @@ takes and what it costs.*
 serve it: a logging wrapper in `serve.py`, capturing token usage from the
 Gemini response, and a `RUNNING.md` section with the start command and
 environment. Estimated well under ninety minutes.
+
+
+**Run Record (extract)**
+
+First 10 of 20 entries from `logs/requests.jsonl` (full file committed). One request in the full log of 20 is a cold start; note the first entry's latency.
+
+```json
+{"ts": "2026-11-12T16:56:11.567+00:00", "request_id": "f38bc47b", "question": "How much printing quota does each student get per semester?", "answer": "Each student gets $30 of printing per semester, which is about 600 black-and-white pages (admin_printing_quota.txt).", "refused": false, "best_distance": 0.3077, "n_sources": 5, "status": 200, "latency_ms": 1691, "error": null, "model_calls": 1, "prompt_tokens": 427, "output_tokens": 33}
+{"ts": "2026-11-12T16:56:15.015+00:00", "request_id": "c2c3b1f9", "question": "How often does the campus shuttle run on weekdays?", "answer": "The campus shuttle runs every 20 minutes on weekdays (transit_shuttle.txt).", "refused": false, "best_distance": 0.1825, "n_sources": 5, "status": 200, "latency_ms": 1397, "error": null, "model_calls": 1, "prompt_tokens": 414, "output_tokens": 19}
+{"ts": "2026-11-12T16:56:24.308+00:00", "request_id": "13f1c32c", "question": "When can I change my meal plan tier?", "answer": "You can change your meal plan tier once, during the first ten days of the semester. After that, it is locked. \n\nSource: admin_meal_plan_changes.txt", "refused": false, "best_distance": 0.2161, "n_sources": 5, "status": 200, "latency_ms": 7247, "error": null, "model_calls": 1, "prompt_tokens": 378, "output_tokens": 38}
+{"ts": "2026-11-12T16:56:38.637+00:00", "request_id": "dbede4a4", "question": "Is the CS 210 final exam curved?", "answer": "No, the CS 210 final exam is not curved. \n\nSource: `course_cs_210.txt` (and also found in `course_cs_210_exams.txt`)", "refused": false, "best_distance": 0.4409, "n_sources": 4, "status": 200, "latency_ms": 12303, "error": null, "model_calls": 1, "prompt_tokens": 425, "output_tokens": 47}
+{"ts": "2026-11-12T16:56:49.553+00:00", "request_id": "a91be392", "question": "What's the best time to do laundry in Aldridge Hall?", "answer": "The best time to do laundry in Aldridge Hall is Tuesday or Wednesday morning (housing_aldridge_hall_laundry.txt).", "refused": false, "best_distance": 0.1226, "n_sources": 5, "status": 200, "latency_ms": 8892, "error": null, "model_calls": 1, "prompt_tokens": 346, "output_tokens": 28}
+{"ts": "2026-11-12T16:56:52.063+00:00", "request_id": "fd7fa185", "question": "What is the capital of Mongolia?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.7873, "n_sources": 0, "status": 200, "latency_ms": 470, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+{"ts": "2026-11-12T16:56:55.120+00:00", "request_id": "c7eb6722", "question": "How do I change the oil in a diesel engine?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.9228, "n_sources": 0, "status": 200, "latency_ms": 900, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+{"ts": "2026-11-12T16:56:57.539+00:00", "request_id": "3ea0b232", "question": "Who won the 1994 World Cup?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.8474, "n_sources": 0, "status": 200, "latency_ms": 382, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+{"ts": "2026-11-12T16:56:59.954+00:00", "request_id": "353eccc7", "question": "What is the recommended dosage of ibuprofen for a headache?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.8487, "n_sources": 0, "status": 200, "latency_ms": 371, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+{"ts": "2026-11-12T16:57:02.581+00:00", "request_id": "ad8a3c8f", "question": "How do I write a for loop in Rust?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.8598, "n_sources": 0, "status": 200, "latency_ms": 593, "error": null, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+```

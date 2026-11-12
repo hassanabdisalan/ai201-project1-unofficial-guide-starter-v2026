@@ -255,3 +255,43 @@ weeks.
 
 `results/` is deliberately **not** in `.gitignore`. Your run logs are evidence
 that the test actually happened, and they're part of what gets graded.
+
+
+---
+
+## Capstone: running the instrumented service (Path B — local with logs)
+
+**Start it** (from the repo root, venv active, `GEMINI_API_KEY` in `.env`):
+
+```powershell
+# Windows (gunicorn does not run on Windows)
+$env:AI201_CACHE="0"; $env:PORT="5000"; python serve.py
+```
+
+```bash
+# macOS / Linux
+AI201_CACHE=0 gunicorn -w 1 -b 0.0.0.0:5000 serve:app
+```
+
+First time only: `python app.py index` to build the vector index (`/health`
+reports `index_ready`). Then:
+
+```bash
+curl -X POST localhost:5000/ask -H 'Content-Type: application/json' \
+     -d '{"question": "Is the CS 210 final exam curved?"}'
+```
+
+**Why `AI201_CACHE=0` and `-w 1`:** the response cache would make repeat
+questions cost zero tokens and hide real cost and latency; and token/call
+counts in the log are per-request differences of one process's counters, so
+more than one worker would make them wrong.
+
+**The log:** every `POST /ask` appends a JSON line to `logs/requests.jsonl`
+(change with `AI201_LOG_PATH`). Fields: `ts, request_id, question, answer,
+refused, best_distance, n_sources, status, latency_ms, error, model_calls,
+prompt_tokens, output_tokens`.
+
+**Environment:** Python 3.12 (3.11–3.13 supported), dependencies pinned in
+`requirements.txt`, embedding model = Chroma's bundled ONNX all-MiniLM-L6-v2
+(~80 MB, downloaded on first run), generation model `gemini-3.5-flash-lite`
+via the Gemini API.
