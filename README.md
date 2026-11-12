@@ -1110,3 +1110,65 @@ Each of these is ONE answered request, yet it logs `model_calls` of 2 or more:*
 {"question": "What is the capital of Mongolia?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.7873, "n_sources": 0, "status": 200, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
 {"question": "How do I change the oil in a diesel engine?", "answer": "I don't have enough information about that.", "refused": true, "best_distance": 0.9228, "n_sources": 0, "status": 200, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
 ```
+
+
+**Capstone Verdicts**
+
+Against the targets in `criteria.md` (unchanged, no criterion revised):
+
+| # | Target | Trials | Verdict |
+|---|---|---|---|
+| 1 | 20/20 complete log lines | 20, 20, 20 | **MET** |
+| 2 | 5/5 readable, logged 500s under 30 s | 5, 5, 5 | **MET** |
+| 3 | at least 9/10 answered under 10 s | 10, 9, 10 | **MET** (trial 2 sat exactly on the line) |
+| 4 | 20/20 correctly attributed lines | 8, 9, 11 | **MISSED** (all three trials) |
+| 5 | 5/5 out-of-scope refused, 0 model calls | 5, 5, 5 | **MET** |
+
+**Capstone Diagnosis**
+
+*Criterion 4 — the one miss.* **Stage: the usage accounting in `serve.py::ask`
+(`usage_since`), which reads process-wide counters in `generate.py`
+(`_session_calls`, `_session_prompt_tokens`, `_session_output_tokens`).
+Mechanism: concurrency.** `ask` snapshots the counters when a request starts and
+subtracts when it ends, which gives that request's usage only if no other request
+makes a model call in between. `python serve.py` runs each request in its own
+thread, so with 3 clients a request's window overlaps others' calls and it is
+charged for them. The evidence is in the logs: in the three trials 12, 11 and 9 of
+20 lines were wrong, and the wrong ones are the signature of this mechanism, not
+of random corruption. Single answered requests logged `model_calls` of 2, 3, 4, 7,
+8, 10 and 14 when each makes exactly one call (a slow call is billed to every
+request that overlapped it, hence the big numbers), and about one refused request
+per trial logged non-zero counts it never earned. Same logged latency, same
+retrieval, same answers; only the attribution is wrong. This did not show up in
+the 20-request run record from Milestone 3 or in criteria 1, 3 or 5, because they
+send one request at a time.
+
+*Pattern.* There is one problem, not several: the only miss traces to the one
+design choice that per-request numbers are derived from shared state. It also
+means the "What It Costs" figures above (398 in / 33 out tokens per answered
+request) are valid, because they came from sequential requests, but the log's
+token fields are untrustworthy for any real concurrent use, and anyone summing them
+to estimate cost under load would get an inflated number.
+
+*Were the met targets too easy?* Honestly, partly. Criteria 1 and 5 were the
+safe ones, by design, and held easily. Criterion 2 passed with a wide margin (all
+failures returned in under 0.7 s against a 30 s limit), but only tests a *fast*
+failure (an invalid key); there is no timeout in `serve.py`, so a model call that
+*hangs* would not be caught by it. If I tightened one it would be criterion 2: add
+a case where the model call never returns and require a 500 within 30 s. I expect
+that would miss. Criterion 3 is the one that genuinely carries risk (trial 2 had 9,
+with one request at 25.7 s).
+
+**The Improvement (declared before building)**
+
+One change, aimed at criterion 4's mechanism: make the usage counters
+**per-thread** instead of per-process. `generate.py` gets a `threading.local()`
+that `generate()` and `_record_tokens` update alongside the existing session
+counters (which stay, so `usage()` and `app.py` are unchanged), plus a small
+`thread_usage()` accessor; `serve.py::ask` reads that instead of subtracting
+global snapshots. Each request runs in one thread end to end (including the model
+call), so its counters can only contain its own calls. I expect criterion 4 to go
+to 20/20 in all three trials and criteria 1, 2, 3 and 5 not to move. The risk I'm
+watching is that the fix quietly breaks the single-request numbers, so I'll compare
+sequential token counts before and after, too. Out of scope: switching to gunicorn
+or multiple processes, and any change to retrieval or the model call.
